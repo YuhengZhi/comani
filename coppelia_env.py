@@ -101,7 +101,7 @@ class Manipulation_Env(gym.Env):
             if(attempts < 0):
                 print("Failed to receive initial state after sending reset message")
                 # TODO: raise error and fail
-        return
+        return {"joint": self.cur_joint, "camera": self.cur_image}
 
     # publish sync 0 to simulator and wait for a reply
     # when the simulator also publishes 0, both sides are up and ready
