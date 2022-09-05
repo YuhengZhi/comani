@@ -17,7 +17,7 @@ initialOrientation = p.getQuaternionFromEuler([0,0,0])
 sphere = p.loadURDF("sphere2red.urdf", initialPos, initialOrientation, globalScaling=0.2)
 plane = p.loadURDF("plane.urdf")
 initialPos = [0.1,-0.1,0.2]
-shere_other = p.loadURDF("sphere_1cm.urdf", initialPos, initialOrientation)
+two_link = p.loadURDF("../reacher.urdf/reacher_link6_1.urdf", initialPos, initialOrientation, useFixedBase = 1)
 
 view = p.computeViewMatrix([0,0,3],[0,0,0],[0,1,0])
 
