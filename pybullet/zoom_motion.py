@@ -14,10 +14,10 @@ print("plugin=", plugin)
 
 initialPos = [0,0,0.2]
 initialOrientation = p.getQuaternionFromEuler([0,0,0])
-sphere = p.loadURDF("sphere2red.urdf", initialPos, initialOrientation, globalScaling=0.2)
+sphere = p.loadURDF("../urdf/sphere.urdf", initialPos, initialOrientation, globalScaling=0.2)
 plane = p.loadURDF("plane.urdf")
 initialPos = [0.1,-0.1,0.2]
-two_link = p.loadURDF("../reacher.urdf/reacher_link6_1.urdf", initialPos, initialOrientation, useFixedBase = 1)
+two_link = p.loadURDF("../urdf/two_link.urdf", initialPos, initialOrientation, useFixedBase = 1)
 
 view = p.computeViewMatrix([0,0,3],[0,0,0],[0,1,0])
 
