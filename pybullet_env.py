@@ -55,15 +55,15 @@ class Manipulation_Env(gym.Env):
         p.changeVisualShape(self.two_link, 0, rgbaColor=[0.1,0.8,0.1,1.0])
         p.changeVisualShape(self.two_link, 2, rgbaColor=[0.1,0.1,0.8,1.0])
 
-        self.observation_space = spaces.Box(0, 1, shape=(480,480,3), dtype=float)
+        self.observation_space = spaces.Box(0, 1, shape=(3,84,84), dtype=float)
         self.action_space = spaces.Box(-1, 1, shape=(5,), dtype=float)
         # Actual low and high action values
         # needed due to DrQv2 assuming -1 to 1 action space
         self.low = np.asarray([-5,-5,-1,-1,1], dtype=float)
         self.high = np.asarray([5,5,1,1,3], dtype=float)
 
-        self.pixelWidth = 480
-        self.pixelHeight = 480
+        self.pixelWidth = 84
+        self.pixelHeight = 84
         self.aspect = 1
         self.camDistance = 2
 
@@ -85,24 +85,22 @@ class Manipulation_Env(gym.Env):
         view = p.computeViewMatrix([0,0,self.camDistance], [0,0,0], [0,1,0])
         projection = p.computeProjectionMatrixFOV(self.fov, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
-        curimg = np.asarray(curimg, dtype=float) / 255
+        curimg = np.asarray(curimg, dtype=np.float32) / 255
         self.cur_ep = 0
-        return np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=2)
+        return np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=0)
     
     def translate(self, action):
-        action = {}
+        full_action = {}
         joint_acts = 2
-        action["joint"] = self.low[:joint_acts] + (self.high[:joint_acts]
+        full_action["joint"] = self.low[:joint_acts] + (self.high[:joint_acts]\
             - self.low[:joint_acts]) * (action[:joint_acts] + 1) / 2
-        action["camera"] = self.low[joint_acts:] + (self.high[joint_acts:]
+        full_action["camera"] = self.low[joint_acts:] + (self.high[joint_acts:]\
             - self.low[joint_acts:]) * (action[joint_acts:] + 1) / 2
-        return action
+        return full_action
     
     def step(self, action):
+        assert(self.action_space.contains(action))
         action = self.translate(action)
-        # Assert that the actions are in the action space
-        assert(self.action_space["joint"].contains(action["joint"]))
-        assert(self.action_space["camera"].contains(action["camera"]))
 
         # Ask pybullet to set the joints to the indicated velocities        
         p.setJointMotorControlArray(self.two_link, [0,1], p.VELOCITY_CONTROL, targetVelocities=action["joint"], forces=[5,5])
@@ -112,7 +110,7 @@ class Manipulation_Env(gym.Env):
             [action["camera"][0], action["camera"][1], 0], [0,1,0])
         projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
-        curimg = np.asarray(curimg, dtype=float) / 255
+        curimg = np.asarray(curimg, dtype=np.float32) / 255
         cur_joint = p.getJointStates(self.two_link, [0,1])
         cur_joint = [cur_joint[0][0], cur_joint[1][0]]
 
@@ -131,5 +129,5 @@ class Manipulation_Env(gym.Env):
         if(distance < self.target_reached):
             reward = 10
             done = True
-        print(str(distance) + '  ' + str(cur_joint) + '  ' + str(self.cur_ep))
-        return np.stack([curimg[:,:,2], curimg[:,:,2], curimg[:,:,0]], axis=2), reward, done, ""
+        # print(str(distance) + '  ' + str(cur_joint) + '  ' + str(self.cur_ep))
+        return np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=0), reward, done, ""
