@@ -10,9 +10,11 @@ import math
 import numpy as np
 import pkgutil
 import os
-import dm_env
+import gym
+from gym import spaces
 
-class Manipulation_Env(dm_env.Environment):
+# TODO: Consider adding an action repeat wrapper
+class Manipulation_Env(gym.Env):
     def __init__(self, noise=0.0, record=False):
         self.noise = noise
         self.record = record
@@ -53,6 +55,13 @@ class Manipulation_Env(dm_env.Environment):
         p.changeVisualShape(self.two_link, 0, rgbaColor=[0.1,0.8,0.1,1.0])
         p.changeVisualShape(self.two_link, 2, rgbaColor=[0.1,0.1,0.8,1.0])
 
+        self.observation_space = spaces.Box(0, 1, shape=(480,480,3), dtype=float)
+        self.action_space = spaces.Box(-1, 1, shape=(5,), dtype=float)
+        # Actual low and high action values
+        # needed due to DrQv2 assuming -1 to 1 action space
+        self.low = np.asarray([-5,-5,-1,-1,1], dtype=float)
+        self.high = np.asarray([5,5,1,1,3], dtype=float)
+
         self.pixelWidth = 480
         self.pixelHeight = 480
         self.aspect = 1
@@ -63,27 +72,6 @@ class Manipulation_Env(dm_env.Environment):
     def __del__(self):
         p.unloadPlugin(self.plugin)
         p.disconnect()
-
-    def observation_spec(self):
-        return {
-            "joint": dm_env.specs.BoundedArray(
-                (4,), np.float64, minimum=[-np.inf, -3, -5, -5],
-                maximum=[np.inf, 3, 5, 5]
-            ),
-            "camera": dm_env.specs.BoundedArray(
-                (480,480,3), np.float64, minimum=0, maximum=1
-            )
-        }
-    
-    def action_spec(self):
-        return {
-            "joint": dm_env.specs.BoundedArray(
-                (2,), np.float64, minimum=-5, maximum=5
-            ),
-            "camera": dm_env.specs.BoundedArray(
-                (3,), np.float64, minimum=[-1,-1,1], maximum=[1,1,3]
-            )
-        }
 
     def reset(self):
         # Move sphere to reset location
@@ -99,17 +87,19 @@ class Manipulation_Env(dm_env.Environment):
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=float) / 255
         self.cur_ep = 0
-        return dm_env.TimeStep(
-            step_type = dm_env.StepType.FIRST,
-            reward = 0,
-            discount = 1,
-            observation = {
-                "joint": np.zeros(2),
-                "camera": np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=2)
-            }
-        )
+        return np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=2)
+    
+    def translate(self, action):
+        action = {}
+        joint_acts = 2
+        action["joint"] = self.low[:joint_acts] + (self.high[:joint_acts]
+            - self.low[:joint_acts]) * (action[:joint_acts] + 1) / 2
+        action["camera"] = self.low[joint_acts:] + (self.high[joint_acts:]
+            - self.low[joint_acts:]) * (action[joint_acts:] + 1) / 2
+        return action
     
     def step(self, action):
+        action = self.translate(action)
         # Assert that the actions are in the action space
         assert(self.action_space["joint"].contains(action["joint"]))
         assert(self.action_space["camera"].contains(action["camera"]))
@@ -129,7 +119,7 @@ class Manipulation_Env(dm_env.Environment):
         # Ask pybullet for the position of the sphere
         sphere_pos = p.getBasePositionAndOrientation(self.sphere)[0][:2]
         self.cur_ep += 1
-        step_type = dm_env.StepType.MID
+        done = False
         reward = 0
         distance = np.sum(np.square(self.target_pos - np.asarray(sphere_pos)))
         distance = np.sqrt(distance)
@@ -137,17 +127,9 @@ class Manipulation_Env(dm_env.Environment):
         # Return a small reward for being closer to the target
         if(self.cur_ep >= self.max_ep):
             reward = self.reward_shaping * self.target_reached / distance
-            step_type = dm_env.StepType.LAST
+            done = True
         if(distance < self.target_reached):
             reward = 10
-            step_type = dm_env.StepType.LAST
+            done = True
         print(str(distance) + '  ' + str(cur_joint) + '  ' + str(self.cur_ep))
-        return dm_env.TimeStep(
-            step_type = step_type,
-            reward = reward,
-            discount = 1,
-            observation = {
-                "joint": cur_joint,
-                "camera": np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=2)
-            }
-        )
+        return np.stack([curimg[:,:,2], curimg[:,:,2], curimg[:,:,0]], axis=2), reward, done, ""

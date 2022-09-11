@@ -11,13 +11,14 @@ import numpy as np
 import gym
 from gym import spaces
 import pkgutil
+import os
 
 class Manipulation_Env(gym.Env):
     def __init__(self, noise=0.0):
         self.observation_space = spaces.Dict(
             {   # Position and velocity for 7 joints
                 "joint": spaces.Box( # Position and then velocity
-                    np.asarray([-np.inf, -3, -5, 5], dtype=float),
+                    np.asarray([-np.inf, -3, -5, -5], dtype=float),
                     np.asarray([np.inf,3,5,5], dtype=float),
                     shape=(4,), dtype=float
                 ),
@@ -41,9 +42,11 @@ class Manipulation_Env(gym.Env):
 
         initialPos = [0,0,0.03]
         initialOrientation = p.getQuaternionFromEuler([0,0,0])
+        directory = os.path.realpath(__file__).split('/')
+        directory = '/'.join(directory[:-1])
         self.plane = p.loadURDF("plane.urdf")
-        self.sphere = p.loadURDF("./urdf/sphere.urdf", globalScaling=0.05)
-        self.two_link = p.loadURDF("./urdf/two_link.urdf", initialPos, initialOrientation)
+        self.sphere = p.loadURDF(directory + "/urdf/sphere.urdf", globalScaling=0.05)
+        self.two_link = p.loadURDF(directory + "/urdf/two_link.urdf", initialPos, initialOrientation)
         #self.fixation = p.createConstraint(self.plane, -1, self.two_link, 0, p.JOINT_FIXED, [0,0,1], [0,0,1], [0,0,0])
 
         self.spherePos = [0.12,0.02,0.005]  # Reset sphere to this position
