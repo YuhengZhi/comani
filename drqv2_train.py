@@ -20,13 +20,16 @@ num_train_frames = 3100000 # Taken from the medium difficulty rating
 num_train_frames = 10000
 action_repeat = 2 # Not 100% sure what this means yet. Probably related to multi-step return
 
-record_every = 2 # Record a video every record_every episodes
+record_every = 50 # Record a video every record_every episodes
+save_every = 50 # Save an agent snapshot every save_every episodes
 
 
 directory = Path.cwd()
 replay_dir = directory / "replays"
 record_dir = directory / "record"
+save_dir = directory / "snapshots"
 record_dir.mkdir(exist_ok=True)
+save_dir.mkdir(exist_ok=True)
 
 train_env = Manipulation_Env()
 
@@ -57,6 +60,7 @@ print("Episode 0")
 
 for i in range(num_train_frames):
     if(done):  # An episode is done
+        print("Reward " + str(ep_reward))
         reward_history.append(ep_reward)
         length_history.append(ep_length)
         ep_length = 0
@@ -82,6 +86,11 @@ for i in range(num_train_frames):
             record = cv2.VideoWriter(str(record_dir) + '/' + str(ep_num) + '.mp4',
                 cv2.VideoWriter_fourcc(*'mp4v'), 30, (84,84))
             record.write((obs.transpose([1,2,0]) * 255).astype(np.uint8))
+
+        if(ep_num % save_every == 0):
+            agent_file = save_dir / (str(ep_num)+'_save')
+            with agent_file.open('wb') as f:
+                torch.save(agent, agent_file)
 
     with torch.no_grad(), eval_mode(agent):
         action = agent.act(obs, i, eval_mode=False)

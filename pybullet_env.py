@@ -118,13 +118,12 @@ class Manipulation_Env(gym.Env):
         sphere_pos = p.getBasePositionAndOrientation(self.sphere)[0][:2]
         self.cur_ep += 1
         done = False
-        reward = 0
         distance = np.sum(np.square(self.target_pos - np.asarray(sphere_pos)))
         distance = np.sqrt(distance)
+        reward = -distance * 0.1
         # Some basic reward shaping
         # Return a small reward for being closer to the target
         if(self.cur_ep >= self.max_ep):
-            reward = self.reward_shaping * self.target_reached / distance
             done = True
         if(distance < self.target_reached):
             reward = 10

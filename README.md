@@ -9,8 +9,8 @@ These each test one individual aspect needed for the environment
 a task that involves using a two-link arm to push a ball,
 with camera positioning and zoom features.
 
-`drqv2.py` and `replay_buffer.py` are copied from the official drqv2 implementation
-to provide the drqv2 agent and replay buffer
+To run the code, copy over `drqv2.py`, `replay_buffer.py`, `utils.py` and `dmc.py` from the official
+drqv2 implementation
 
 The **replays** directory is automatically created by `drqv2_train.py` if it does
 not exist yet. This is where replays are stored. 
