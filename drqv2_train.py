@@ -16,14 +16,28 @@ def assert_exists(directory):
         os.mkdir(directory)
 
 # Configuration variables
-num_train_frames = 3100000 # Taken from the medium difficulty rating
-num_train_frames = 10000
-action_repeat = 2 # Not 100% sure what this means yet. Probably related to multi-step return
+num_train_frames = 110000 # Taken from the medium difficulty rating
 
-record_every = 50 # Record a video every record_every episodes
-save_every = 50 # Save an agent snapshot every save_every episodes
+record_every = 200 # Record a video every record_every episodes
+save_every = 200 # Save an agent snapshot every save_every episodes
+
+load_from = "" # Option to load a saved checkpoint
+
+# Agent configuration variables
+stddev_schedule = 'linear(1.0,0.1,100000)'
+learning_rate = 1e-4
+obs_shape = (3,84,84)
+action_shape = (5,)
+feature_dim = 50
+hidden_dim = 1024
+critic_target_tau = 0.01
+num_expl_steps = 2000
+update_every_steps = 2
+stddev_clip = 0.3
+use_tb = True
 
 
+# Create video recording and model save directories
 directory = Path.cwd()
 replay_dir = directory / "replays"
 record_dir = directory / "record"
@@ -31,6 +45,7 @@ save_dir = directory / "snapshots"
 record_dir.mkdir(exist_ok=True)
 save_dir.mkdir(exist_ok=True)
 
+# Initialize environment
 train_env = Manipulation_Env()
 
 obs = train_env.reset()
@@ -42,9 +57,8 @@ reward_history = []
 ep_reward = 0
 ep_num = 0
 
-# TODO: write resolution in common configuration
-data_specs = (specs.Array((3,84,84), np.float32, 'observation'),
-              specs.Array((5,), np.float32, 'action'),
+data_specs = (specs.Array(obs_shape, np.float32, 'observation'),
+              specs.Array(action_shape, np.float32, 'action'),
               specs.Array((1,), np.float32, 'reward'),
               specs.Array((1,), np.float32, 'discount'))
 replay_storage = ReplayBufferStorage(data_specs, replay_dir)
@@ -53,8 +67,13 @@ replay_loader = make_replay_loader(
      3, 0.99
 )
 
-agent = DrQV2Agent((3,84,84), (5,), 'cuda', 1e-4, 50, 1024, 0.01, 2000,
-    2, 'linear(1.0,0.1,500000)', 0.3, True)
+agent = DrQV2Agent(obs_shape, action_shape, 'cuda', learning_rate,
+    feature_dim, hidden_dim, critic_target_tau, num_expl_steps,
+    update_every_steps, stddev_schedule, stddev_clip, use_tb)
+
+if(not load_from == ""):
+    print("Loading saved checkpoint from " + str(load_from))
+    torch.load(load_from)
 
 print("Episode 0")
 

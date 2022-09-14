@@ -78,7 +78,7 @@ class Manipulation_Env(gym.Env):
         p.resetBasePositionAndOrientation(self.sphere, self.spherePos, self.sphereOrientation)
         # Reset joint position and velocity control
         p.resetJointState(self.two_link, 0, 0)
-        p.resetJointState(self.two_link, 2, 0)
+        p.resetJointState(self.two_link, 1, 0)
         p.setJointMotorControlArray(self.two_link, [0,1], p.VELOCITY_CONTROL, targetVelocities=[0]*2, forces=[20,20])
         p.stepSimulation()
         time.sleep(0.5) # Return the initial state
@@ -106,9 +106,12 @@ class Manipulation_Env(gym.Env):
         p.setJointMotorControlArray(self.two_link, [0,1], p.VELOCITY_CONTROL, targetVelocities=action["joint"], forces=[5,5])
         p.stepSimulation()
         time.sleep(1.0/240)
-        view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
-            [action["camera"][0], action["camera"][1], 0], [0,1,0])
-        projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
+        # Changed to fixed camera position to facilitate better training
+        #view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
+        #    [action["camera"][0], action["camera"][1], 0], [0,1,0])
+        view = p.computeViewMatrix([0,0,self.camDistance], [0,0,0], [0,1,0])
+        #projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
+        projection = p.computeProjectionMatrixFOV(self.fov / 1.5, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.float32) / 255
         cur_joint = p.getJointStates(self.two_link, [0,1])
