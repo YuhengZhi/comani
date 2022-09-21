@@ -59,8 +59,8 @@ class Manipulation_Env(gym.Env):
         self.action_space = spaces.Box(-1, 1, shape=(5,), dtype=float)
         # Actual low and high action values
         # needed due to DrQv2 assuming -1 to 1 action space
-        self.low = np.asarray([-5,-5,-1,-1,1], dtype=float)
-        self.high = np.asarray([5,5,1,1,3], dtype=float)
+        self.low = np.asarray([-5,-5,-0.7,-0.7,1], dtype=float)
+        self.high = np.asarray([5,5,0.7,0.7,2], dtype=float)
 
         self.pixelWidth = 84
         self.pixelHeight = 84
@@ -107,11 +107,9 @@ class Manipulation_Env(gym.Env):
         p.stepSimulation()
         time.sleep(1.0/240)
         # Changed to fixed camera position to facilitate better training
-        #view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
-        #    [action["camera"][0], action["camera"][1], 0], [0,1,0])
-        view = p.computeViewMatrix([0,0,self.camDistance], [0,0,0], [0,1,0])
-        #projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
-        projection = p.computeProjectionMatrixFOV(self.fov / 1.5, self.aspect, 0.5, 5.0)
+        view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
+            [action["camera"][0], action["camera"][1], 0], [0,1,0])
+        projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.float32) / 255
         cur_joint = p.getJointStates(self.two_link, [0,1])

@@ -2,6 +2,7 @@ import torch
 import os
 import numpy as np
 import cv2
+import pickle
 from dm_env import specs
 from dm_env import StepType
 from replay_buffer import ReplayBufferStorage, make_replay_loader
@@ -10,13 +11,14 @@ from utils import eval_mode
 from drqv2 import DrQV2Agent
 from pathlib import Path
 from dmc import ExtendedTimeStep
+from matplotlib import pyplot as plt
 
 def assert_exists(directory):
     if(not os.path.exists(directory)):
         os.mkdir(directory)
 
 # Configuration variables
-num_train_frames = 110000 # Taken from the medium difficulty rating
+num_train_frames = 1100000 # Taken from the medium difficulty rating
 
 record_every = 200 # Record a video every record_every episodes
 save_every = 200 # Save an agent snapshot every save_every episodes
@@ -37,13 +39,15 @@ stddev_clip = 0.3
 use_tb = True
 
 
-# Create video recording and model save directories
+# Create recording directories
 directory = Path.cwd()
 replay_dir = directory / "replays"
 record_dir = directory / "record"
 save_dir = directory / "snapshots"
+metric_dir = directory / "metrics"
 record_dir.mkdir(exist_ok=True)
 save_dir.mkdir(exist_ok=True)
+metric_dir.mkdir(exist_ok=True)
 
 # Initialize environment
 train_env = Manipulation_Env()
@@ -133,3 +137,14 @@ for i in range(num_train_frames):
     ep_length += 1
     if((ep_num % record_every == 0) and (ep_num > 0)):
         record.write((obs.transpose([1,2,0]) * 255).astype(np.uint8))
+
+# Pickle reward history for possible analysis
+with open(str(metric_dir) + '/' + 'reward_history_object', 'wb') as reward_file:
+    pickle.dump(reward_history, reward_file, protocol = pickle.DEFAULT_PROTOCOL)
+
+# Plot reward vs episode graph
+fig, ax = plt.subplots(1,1)
+ax.set_ylim([-8, 10])
+ax.scatter([i+1 for i in range(len(reward_history))], reward_history, s=1)
+plt.title("Total reward each episode")
+plt.savefig(str(metric_dir) + '/' + 'reward_history.png')
