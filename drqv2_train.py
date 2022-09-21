@@ -13,16 +13,12 @@ from pathlib import Path
 from dmc import ExtendedTimeStep
 from matplotlib import pyplot as plt
 
-def assert_exists(directory):
-    if(not os.path.exists(directory)):
-        os.mkdir(directory)
-
 # Configuration variables
 num_train_frames = 1100000 # Taken from the medium difficulty rating
 num_train_frames = 10000
 
-record_every = 1 # Record a video every record_every episodes
-save_every = 1 # Save an agent snapshot every save_every episodes
+record_every = 200 # Record a video every record_every episodes
+save_every = 200 # Save an agent snapshot every save_every episodes
 
 load_from = "" # Option to load a saved checkpoint
 
@@ -49,6 +45,12 @@ metric_dir = directory / "metrics"
 record_dir.mkdir(exist_ok=True)
 save_dir.mkdir(exist_ok=True)
 metric_dir.mkdir(exist_ok=True)
+
+def log_line(line):
+    print(line)
+    log_file.write(line + '\n')
+
+log_file = open('training_log', 'w')
 
 # Initialize environment
 train_env = Manipulation_Env()
@@ -77,14 +79,14 @@ agent = DrQV2Agent(obs_shape, action_shape, 'cuda', learning_rate,
     update_every_steps, stddev_schedule, stddev_clip, use_tb)
 
 if(not load_from == ""):
-    print("Loading saved checkpoint from " + str(load_from))
+    log_line("Loading saved checkpoint from " + str(load_from))
     torch.load(load_from)
 
-print("Episode 0")
+log_line("Episode 0")
 
 for i in range(num_train_frames):
     if(done):  # An episode is done
-        print("Reward " + str(ep_reward))
+        log_line("Reward " + str(ep_reward))
         reward_history.append(ep_reward)
         length_history.append(ep_length)
         ep_length = 0
@@ -105,7 +107,7 @@ for i in range(num_train_frames):
 
         replay_storage.add(step)
 
-        print("Episode " + str(ep_num))
+        log_line("Episode " + str(ep_num))
         if(ep_num % record_every == 0):
             record = cv2.VideoWriter(str(record_dir) + '/' + str(ep_num) + '.mp4',
                 cv2.VideoWriter_fourcc(*'mp4v'), 30, (84,84))
@@ -149,3 +151,5 @@ ax.set_ylim([min(reward_history) - 2, 10])
 ax.scatter([i+1 for i in range(len(reward_history))], reward_history, s=1)
 plt.title("Total reward each episode")
 plt.savefig(str(metric_dir) + '/' + 'reward_history.png')
+
+log_file.close()
