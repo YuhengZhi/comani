@@ -10,6 +10,7 @@ import math
 import numpy as np
 import pkgutil
 import os
+import random
 import gym
 from gym import spaces
 
@@ -34,8 +35,9 @@ class Manipulation_Env(gym.Env):
         self.two_link = p.loadURDF(directory + "/urdf/two_link.urdf", initialPos, initialOrientation)
         #self.fixation = p.createConstraint(self.plane, -1, self.two_link, 0, p.JOINT_FIXED, [0,0,1], [0,0,1], [0,0,0])
 
-        self.spherePos = [0.12,0.02,0.005]  # Reset sphere to this position
-        self.sphereOrientation = p.getQuaternionFromEuler([0,0,0])
+        # Set in the ball_position function
+        self.sphere_pos = []  # Reset sphere to this position
+        self.sphere_orientation = p.getQuaternionFromEuler([0,0,0])
 
         # Target position for the sphere
         self.target_pos = np.asarray([-0.07,0.155])
@@ -72,10 +74,20 @@ class Manipulation_Env(gym.Env):
     def __del__(self):
         p.unloadPlugin(self.plugin)
         p.disconnect()
+    
+    def ball_position(self):
+        draw = random.random()
+        if(draw > 0.5):
+            self.sphere_pos = [0.12,0.02,0.005]
+            self.target_pos = np.asarray([-0.07, 0.155])
+        else:
+            self.sphere_pos = [0.12,-0.02,0.005]
+            self.target_pos = np.asarray([-0.07, -0.155])
 
     def reset(self):
+        self.ball_position()
         # Move sphere to reset location
-        p.resetBasePositionAndOrientation(self.sphere, self.spherePos, self.sphereOrientation)
+        p.resetBasePositionAndOrientation(self.sphere, self.sphere_pos, self.sphere_orientation)
         # Reset joint position and velocity control
         p.resetJointState(self.two_link, 0, 0)
         p.resetJointState(self.two_link, 1, 0)

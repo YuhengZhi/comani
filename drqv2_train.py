@@ -19,9 +19,10 @@ def assert_exists(directory):
 
 # Configuration variables
 num_train_frames = 1100000 # Taken from the medium difficulty rating
+num_train_frames = 10000
 
-record_every = 200 # Record a video every record_every episodes
-save_every = 200 # Save an agent snapshot every save_every episodes
+record_every = 1 # Record a video every record_every episodes
+save_every = 1 # Save an agent snapshot every save_every episodes
 
 load_from = "" # Option to load a saved checkpoint
 
@@ -144,7 +145,7 @@ with open(str(metric_dir) + '/' + 'reward_history_object', 'wb') as reward_file:
 
 # Plot reward vs episode graph
 fig, ax = plt.subplots(1,1)
-ax.set_ylim([-8, 10])
+ax.set_ylim([min(reward_history) - 2, 10])
 ax.scatter([i+1 for i in range(len(reward_history))], reward_history, s=1)
 plt.title("Total reward each episode")
 plt.savefig(str(metric_dir) + '/' + 'reward_history.png')
