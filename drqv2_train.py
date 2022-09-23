@@ -17,8 +17,11 @@ from matplotlib import pyplot as plt
 num_train_frames = 1100000 # Taken from the medium difficulty rating
 num_train_frames = 10000
 
-record_every = 200 # Record a video every record_every episodes
-save_every = 200 # Save an agent snapshot every save_every episodes
+eval_run = False # If this run is an evaluation run
+eval_episodes = 10
+
+record_every = 1 # Record a video every record_every episodes
+save_every = 10 # Save an agent snapshot every save_every episodes
 
 load_from = "" # Option to load a saved checkpoint
 
@@ -49,6 +52,29 @@ metric_dir.mkdir(exist_ok=True)
 def log_line(line):
     print(line)
     log_file.write(line + '\n')
+
+def evaluate():
+    eval_dir = directory / "evaluation"
+    eval_dir.mkdir(exist_ok=True)
+    for i in range(eval_episodes):
+        obs = train_env.reset()
+        record = cv2.VideoWriter(str(eval_dir) + '/' + str(i) + '.mp4',
+            cv2.VideoWriter_fourcc(*'mp4v'), 30, (84,84))
+        record.write((obs.transpose([1,2,0]) * 255).astype(np.uint8))
+        done = False
+        ep_length = 0
+        ep_reward = 0
+        print("Evaluate episode " + str(i))
+
+        while(not done):
+            with torch.no_grad(), eval_mode(agent):
+                action = agent.act(obs, i, eval_mode = False)
+            obs, reward, done, info = train_env.step(action)
+            ep_reward += reward
+            ep_length += 1
+            record.write((obs.transpose([1,2,0]) * 255).astype(np.uint8))
+        print("Reward " + str(ep_reward) + "  Length " + str(ep_length))
+        record.release()
 
 log_file = open('training_log', 'w')
 
@@ -81,6 +107,11 @@ agent = DrQV2Agent(obs_shape, action_shape, 'cuda', learning_rate,
 if(not load_from == ""):
     log_line("Loading saved checkpoint from " + str(load_from))
     torch.load(load_from)
+
+if(eval_run):
+    assert(not load_from == "")  # Assert that a save snapshot is specified
+    evaluate()
+    quit()
 
 log_line("Episode 0")
 
