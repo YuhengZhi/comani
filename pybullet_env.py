@@ -78,10 +78,11 @@ class Manipulation_Env(gym.Env):
     def ball_position(self):
         draw = random.random()
         if(draw > 0.5):
-            self.sphere_pos = [0.12,0.02,0.005]
+            # This was previously [0.12, 0.02, 0.005]
+            self.sphere_pos = [0.12,0.04,0.005]
             self.target_pos = np.asarray([-0.07, 0.155])
         else:
-            self.sphere_pos = [0.12,-0.02,0.005]
+            self.sphere_pos = [0.12,-0.04,0.005]
             self.target_pos = np.asarray([-0.07, -0.155])
 
     def reset(self):
@@ -119,9 +120,12 @@ class Manipulation_Env(gym.Env):
         p.stepSimulation()
         time.sleep(1.0/240)
         # Changed to fixed camera position to facilitate better training
-        view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
-            [action["camera"][0], action["camera"][1], 0], [0,1,0])
-        projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
+        #view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
+        #    [action["camera"][0], action["camera"][1], 0], [0,1,0])
+        #projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
+        view = p.computeViewMatrix([0, 0, self.camDistance],
+            [0, 0, 0], [0,1,0])
+        projection = p.computeProjectionMatrixFOV(self.fov / 3.5, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.float32) / 255
         cur_joint = p.getJointStates(self.two_link, [0,1])

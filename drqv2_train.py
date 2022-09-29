@@ -3,6 +3,7 @@ import os
 import numpy as np
 import cv2
 import pickle
+import faulthandler
 from dm_env import specs
 from dm_env import StepType
 from replay_buffer import ReplayBufferStorage, make_replay_loader
@@ -13,11 +14,12 @@ from pathlib import Path
 from dmc import ExtendedTimeStep
 from matplotlib import pyplot as plt
 
+faulthandler.enable()
+
 # Configuration variables
 num_train_frames = 1100000 # Taken from the medium difficulty rating
-num_train_frames = 10000
 
-record_every = 200 # Record a video every record_every episodes
+record_every = 50 # Record a video every record_every episodes
 save_every = 200 # Save an agent snapshot every save_every episodes
 
 load_from = "" # Option to load a saved checkpoint
@@ -70,7 +72,7 @@ data_specs = (specs.Array(obs_shape, np.float32, 'observation'),
               specs.Array((1,), np.float32, 'discount'))
 replay_storage = ReplayBufferStorage(data_specs, replay_dir)
 replay_loader = make_replay_loader(
-    replay_dir, 1000000, 256, 0, False,
+    replay_dir, 100000, 256, 0, False,
      3, 0.99
 )
 
@@ -80,7 +82,7 @@ agent = DrQV2Agent(obs_shape, action_shape, 'cuda', learning_rate,
 
 if(not load_from == ""):
     log_line("Loading saved checkpoint from " + str(load_from))
-    torch.load(load_from)
+    agent = torch.load(load_from)
 
 log_line("Episode 0")
 
@@ -120,7 +122,7 @@ for i in range(num_train_frames):
 
     with torch.no_grad(), eval_mode(agent):
         action = agent.act(obs, i, eval_mode=False)
-    if(i > 4100):
+    if(i > 15000):
         metrics = agent.update(iter(replay_loader), i)
     obs, reward, done, info = train_env.step(action)
     ep_reward += reward
