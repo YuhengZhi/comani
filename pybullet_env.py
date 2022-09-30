@@ -33,14 +33,16 @@ class Manipulation_Env(gym.Env):
         self.plane = p.loadURDF("plane.urdf")
         self.sphere = p.loadURDF(directory + "/urdf/sphere.urdf", globalScaling=0.05)
         self.two_link = p.loadURDF(directory + "/urdf/two_link.urdf", initialPos, initialOrientation)
+        self.target_sphere = p.loadURDF(directory + '/urdf/sphere_blue.urdf', globalScaling=0.05)
         #self.fixation = p.createConstraint(self.plane, -1, self.two_link, 0, p.JOINT_FIXED, [0,0,1], [0,0,1], [0,0,0])
 
         # Set in the ball_position function
-        self.sphere_pos = []  # Reset sphere to this position
+        self.sphere_pos_ll = np.asarray([0.12, 0.06, 0.005]) # Range of spawn locations for the sphere
+        self.sphere_pos_ur = np.asarray([0.18, 0.10, 0.005])
         self.sphere_orientation = p.getQuaternionFromEuler([0,0,0])
 
         # Target position for the sphere
-        self.target_pos = np.asarray([-0.07,0.155])
+        self.target_pos = np.asarray([0.15, 0.3])
         self.target_reached = 0.05
         self.cur_ep = 0
         self.max_ep = 300
@@ -74,21 +76,20 @@ class Manipulation_Env(gym.Env):
     def __del__(self):
         p.unloadPlugin(self.plugin)
         p.disconnect()
-    
-    def ball_position(self):
-        draw = random.random()
-        if(draw > 0.5):
-            # This was previously [0.12, 0.02, 0.005]
-            self.sphere_pos = [0.12,0.04,0.005]
-            self.target_pos = np.asarray([-0.07, 0.155])
-        else:
-            self.sphere_pos = [0.12,-0.04,0.005]
-            self.target_pos = np.asarray([-0.07, -0.155])
 
     def reset(self):
-        self.ball_position()
+        # Determine a random spawn position for the sphere
+        coefficients = np.random.rand(3)
+        diff = self.sphere_pos_ur - self.sphere_pos_ll
+        self.sphere_pos = self.sphere_pos_ll + coefficients * diff
+
+        target_pos = np.zeros(3)
+        target_pos[:2] = self.target_pos
+        target_pos[2] = 0.005
+
         # Move sphere to reset location
         p.resetBasePositionAndOrientation(self.sphere, self.sphere_pos, self.sphere_orientation)
+        p.resetBasePositionAndOrientation(self.target_sphere, target_pos, self.sphere_orientation)
         # Reset joint position and velocity control
         p.resetJointState(self.two_link, 0, 0)
         p.resetJointState(self.two_link, 1, 0)
@@ -125,7 +126,7 @@ class Manipulation_Env(gym.Env):
         #projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
         view = p.computeViewMatrix([0, 0, self.camDistance],
             [0, 0, 0], [0,1,0])
-        projection = p.computeProjectionMatrixFOV(self.fov / 3.5, self.aspect, 0.5, 5.0)
+        projection = p.computeProjectionMatrixFOV(self.fov / 3, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.float32) / 255
         cur_joint = p.getJointStates(self.two_link, [0,1])

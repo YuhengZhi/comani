@@ -152,7 +152,7 @@ for i in range(num_train_frames):
 
     with torch.no_grad(), eval_mode(agent):
         action = agent.act(obs, i, eval_mode=False)
-    if(i > 15000):
+    if(i > 12000):
         metrics = agent.update(iter(replay_loader), i)
     obs, reward, done, info = train_env.step(action)
     ep_reward += reward
