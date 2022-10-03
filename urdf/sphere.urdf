@@ -2,8 +2,8 @@
 <robot name="urdf_robot">
   <link name="baseLink">
   	<contact>
-      <rolling_friction value="0.01"/>
-      <spinning_friction value="0.01"/>
+      <rolling_friction value="0.005"/>
+      <spinning_friction value="0.005"/>
     </contact>
 
     <inertial>

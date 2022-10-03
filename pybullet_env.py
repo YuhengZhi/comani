@@ -38,11 +38,12 @@ class Manipulation_Env(gym.Env):
 
         # Set in the ball_position function
         self.sphere_pos_ll = np.asarray([0.12, 0.06, 0.005]) # Range of spawn locations for the sphere
-        self.sphere_pos_ur = np.asarray([0.18, 0.10, 0.005])
+        self.sphere_pos_ur = np.asarray([0.16, 0.10, 0.005])
         self.sphere_orientation = p.getQuaternionFromEuler([0,0,0])
 
         # Target position for the sphere
-        self.target_pos = np.asarray([0.15, 0.3])
+        self.target_pos_ll = np.asarray([-0.10,0.28])
+        self.target_pos_ur = np.asarray([0.15, 0.3])
         self.target_reached = 0.05
         self.cur_ep = 0
         self.max_ep = 300
@@ -63,8 +64,8 @@ class Manipulation_Env(gym.Env):
         self.action_space = spaces.Box(-1, 1, shape=(5,), dtype=float)
         # Actual low and high action values
         # needed due to DrQv2 assuming -1 to 1 action space
-        self.low = np.asarray([-5,-5,-0.7,-0.7,1], dtype=float)
-        self.high = np.asarray([5,5,0.7,0.7,2], dtype=float)
+        self.low = np.asarray([-15,-15,-0.7,-0.7,1], dtype=float)
+        self.high = np.asarray([15,15,0.7,0.7,2], dtype=float)
 
         self.pixelWidth = 84
         self.pixelHeight = 84
@@ -82,6 +83,10 @@ class Manipulation_Env(gym.Env):
         coefficients = np.random.rand(3)
         diff = self.sphere_pos_ur - self.sphere_pos_ll
         self.sphere_pos = self.sphere_pos_ll + coefficients * diff
+
+        coefficients = np.random.rand(2)
+        diff = self.target_pos_ur - self.target_pos_ll
+        self.target_pos = self.target_pos_ll + coefficients * diff
 
         target_pos = np.zeros(3)
         target_pos[:2] = self.target_pos

@@ -34,7 +34,7 @@ action_shape = (5,)
 feature_dim = 50
 hidden_dim = 1024
 critic_target_tau = 0.01
-num_expl_steps = 2000
+num_expl_steps = 6000
 update_every_steps = 2
 stddev_clip = 0.3
 use_tb = True
@@ -152,7 +152,7 @@ for i in range(num_train_frames):
 
     with torch.no_grad(), eval_mode(agent):
         action = agent.act(obs, i, eval_mode=False)
-    if(i > 12000):
+    if(i > num_expl_steps):
         metrics = agent.update(iter(replay_loader), i)
     obs, reward, done, info = train_env.step(action)
     ep_reward += reward
