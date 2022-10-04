@@ -42,8 +42,8 @@ class Manipulation_Env(gym.Env):
         self.sphere_orientation = p.getQuaternionFromEuler([0,0,0])
 
         # Target position for the sphere
-        self.target_pos_ll = np.asarray([-0.10,0.28])
-        self.target_pos_ur = np.asarray([0.15, 0.3])
+        self.target_pos_ll = np.asarray([-0.20,0.56])
+        self.target_pos_ur = np.asarray([0.25, 0.6])
         self.target_reached = 0.05
         self.cur_ep = 0
         self.max_ep = 300
@@ -129,9 +129,9 @@ class Manipulation_Env(gym.Env):
         #view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
         #    [action["camera"][0], action["camera"][1], 0], [0,1,0])
         #projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
-        view = p.computeViewMatrix([0, 0, self.camDistance],
-            [0, 0, 0], [0,1,0])
-        projection = p.computeProjectionMatrixFOV(self.fov / 3, self.aspect, 0.5, 5.0)
+        view = p.computeViewMatrix([0, 0.28, self.camDistance],
+            [0, 0.28, 0], [0,1,0])
+        projection = p.computeProjectionMatrixFOV(self.fov / 2.7, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.float32) / 255
         cur_joint = p.getJointStates(self.two_link, [0,1])

@@ -18,23 +18,24 @@ faulthandler.enable()
 
 # Configuration variables
 num_train_frames = 1100000 # Taken from the medium difficulty rating
+num_train_frames = 160000
 
 eval_run = False # If this run is an evaluation run
 eval_episodes = 10
-record_every = 50 # Record a video every record_every episodes
+record_every = 1 # Record a video every record_every episodes
 save_every = 200 # Save an agent snapshot every save_every episodes
 
 load_from = "" # Option to load a saved checkpoint
 
 # Agent configuration variables
 stddev_schedule = 'linear(1.0,0.1,100000)'
-learning_rate = 1e-4
+learning_rate = 1e-5
 obs_shape = (3,84,84)
 action_shape = (5,)
 feature_dim = 50
 hidden_dim = 1024
 critic_target_tau = 0.01
-num_expl_steps = 6000
+num_expl_steps = 15000
 update_every_steps = 2
 stddev_clip = 0.3
 use_tb = True
