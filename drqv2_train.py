@@ -18,7 +18,7 @@ faulthandler.enable()
 
 # Configuration variables
 num_train_frames = 1100000 # Taken from the medium difficulty rating
-num_train_frames = 160000
+num_train_frames = 10000
 
 eval_run = False # If this run is an evaluation run
 eval_episodes = 10
@@ -29,13 +29,13 @@ load_from = "" # Option to load a saved checkpoint
 
 # Agent configuration variables
 stddev_schedule = 'linear(1.0,0.1,100000)'
-learning_rate = 1e-5
+learning_rate = 1e-4
 obs_shape = (3,84,84)
 action_shape = (5,)
 feature_dim = 50
 hidden_dim = 1024
 critic_target_tau = 0.01
-num_expl_steps = 15000
+num_expl_steps = 6000
 update_every_steps = 2
 stddev_clip = 0.3
 use_tb = True

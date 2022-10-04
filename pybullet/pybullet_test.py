@@ -1,17 +1,25 @@
 import pybullet as p
-import time
 import pybullet_data
-physicsClient = p.connect(p.GUI)#or p.DIRECT for non-graphical version
-p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
+import time
+
+physicsClient = p.connect(p.GUI)
+initialPos = [0,0,0.03]
 p.setGravity(0,0,-10)
-planeId = p.loadURDF("plane.urdf")
-startPos = [0,0,1]
-startOrientation = p.getQuaternionFromEuler([0,0,0])
-boxId = p.loadURDF("r2d2.urdf",startPos, startOrientation)
-#set the center of mass frame (loadURDF sets base link frame) startPos/Ornp.resetBasePositionAndOrientation(boxId, startPos, startOrientation)
-for i in range (10000):
+p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
+initialOrientation = p.getQuaternionFromEuler([0,0,0])
+plane = p.loadURDF("plane.urdf")
+two_link = p.loadURDF("../urdf/two_link.urdf", initialPos, initialOrientation)
+
+target_sphere = p.loadURDF("../urdf/sphere_blue.urdf",
+    [0,0.2,0.08], initialOrientation, globalScaling=0.05, useFixedBase=True)
+
+for i in range(5):
+    p.setCollisionFilterPair(two_link, target_sphere, i, 0, 0)
+
+for i in range(480):
+    p.setJointMotorControlArray(two_link, [0,1], p.VELOCITY_CONTROL, targetVelocities = [1,0], forces=[20,20])
     p.stepSimulation()
-    time.sleep(1./240.)
-cubePos, cubeOrn = p.getBasePositionAndOrientation(boxId)
-print(cubePos,cubeOrn)
+    time.sleep(1.0/24)
+    print(p.getLinkState(two_link, 3)[0])
+
 p.disconnect()

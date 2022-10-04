@@ -31,30 +31,22 @@ class Manipulation_Env(gym.Env):
         directory = os.path.realpath(__file__).split('/')
         directory = '/'.join(directory[:-1])
         self.plane = p.loadURDF("plane.urdf")
-        self.sphere = p.loadURDF(directory + "/urdf/sphere.urdf", globalScaling=0.05)
         self.two_link = p.loadURDF(directory + "/urdf/two_link.urdf", initialPos, initialOrientation)
-        self.target_sphere = p.loadURDF(directory + '/urdf/sphere_blue.urdf', globalScaling=0.05)
+        self.target_sphere = p.loadURDF(directory + '/urdf/sphere_blue.urdf', globalScaling=0.05, useFixedBase=True)
         #self.fixation = p.createConstraint(self.plane, -1, self.two_link, 0, p.JOINT_FIXED, [0,0,1], [0,0,1], [0,0,0])
 
         # Set in the ball_position function
-        self.sphere_pos_ll = np.asarray([0.12, 0.06, 0.005]) # Range of spawn locations for the sphere
-        self.sphere_pos_ur = np.asarray([0.16, 0.10, 0.005])
         self.sphere_orientation = p.getQuaternionFromEuler([0,0,0])
+        self.radius_min = 0.07
+        self.radius_max = 0.20
+        self.target_distance = 0.04
 
-        # Target position for the sphere
-        self.target_pos_ll = np.asarray([-0.20,0.56])
-        self.target_pos_ur = np.asarray([0.25, 0.6])
-        self.target_reached = 0.05
         self.cur_ep = 0
         self.max_ep = 300
 
         # Reward information
         self.success_reward = 10
         self.reward_shaping = 4 # Max reward to assign for reward shaping
-
-        # Give color to sphere
-        # Not necessary at the moment due to color being in the urdf
-        #p.changeVisualShape(self.sphere, 2, rgbaColor=[0.8,0.1,0.1,1.0])
 
         # Also give color to arm
         p.changeVisualShape(self.two_link, 0, rgbaColor=[0.1,0.8,0.1,1.0])
@@ -79,22 +71,14 @@ class Manipulation_Env(gym.Env):
         p.disconnect()
 
     def reset(self):
-        # Determine a random spawn position for the sphere
-        coefficients = np.random.rand(3)
-        diff = self.sphere_pos_ur - self.sphere_pos_ll
-        self.sphere_pos = self.sphere_pos_ll + coefficients * diff
+        self.target_pos = np.zeros(3)
+        radius = np.random.rand(1)[0] * (self.radius_max - self.radius_min) + self.radius_min
+        direction = np.random.rand(1)[0] * 6.28
+        self.target_pos[0] = radius * np.cos(direction)
+        self.target_pos[1] = radius * np.sin(direction)
+        self.target_pos[2] = 0.08
+        p.resetBasePositionAndOrientation(self.target_sphere, self.target_pos, self.sphere_orientation)
 
-        coefficients = np.random.rand(2)
-        diff = self.target_pos_ur - self.target_pos_ll
-        self.target_pos = self.target_pos_ll + coefficients * diff
-
-        target_pos = np.zeros(3)
-        target_pos[:2] = self.target_pos
-        target_pos[2] = 0.005
-
-        # Move sphere to reset location
-        p.resetBasePositionAndOrientation(self.sphere, self.sphere_pos, self.sphere_orientation)
-        p.resetBasePositionAndOrientation(self.target_sphere, target_pos, self.sphere_orientation)
         # Reset joint position and velocity control
         p.resetJointState(self.two_link, 0, 0)
         p.resetJointState(self.two_link, 1, 0)
@@ -122,34 +106,34 @@ class Manipulation_Env(gym.Env):
         action = self.translate(action)
 
         # Ask pybullet to set the joints to the indicated velocities        
-        p.setJointMotorControlArray(self.two_link, [0,1], p.VELOCITY_CONTROL, targetVelocities=action["joint"], forces=[5,5])
+        p.setJointMotorControlArray(self.two_link, [0,1], p.VELOCITY_CONTROL, targetVelocities=action["joint"], forces=[20,20])
         p.stepSimulation()
         time.sleep(1.0/240)
         # Changed to fixed camera position to facilitate better training
         #view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
         #    [action["camera"][0], action["camera"][1], 0], [0,1,0])
         #projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
-        view = p.computeViewMatrix([0, 0.28, self.camDistance],
-            [0, 0.28, 0], [0,1,0])
-        projection = p.computeProjectionMatrixFOV(self.fov / 2.7, self.aspect, 0.5, 5.0)
+        view = p.computeViewMatrix([0, 0, self.camDistance],
+            [0, 0, 0], [0,1,0])
+        projection = p.computeProjectionMatrixFOV(self.fov / 3, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.float32) / 255
         cur_joint = p.getJointStates(self.two_link, [0,1])
         cur_joint = [cur_joint[0][0], cur_joint[1][0]]
 
-        # Ask pybullet for the position of the sphere
-        sphere_pos = p.getBasePositionAndOrientation(self.sphere)[0][:2]
+        # Calculate the distance from the fingertip link to the target sphere
+        tip_position = np.asarray(p.getLinkState(self.two_link, 3)[0][:2])
         self.cur_ep += 1
         done = False
-        distance = np.sum(np.square(self.target_pos - np.asarray(sphere_pos)))
+        distance = np.sum(np.square(self.target_pos[:2] - tip_position))
         distance = np.sqrt(distance)
-        reward = -distance * 0.1
+        reward = 0
         # Some basic reward shaping
         # Return a small reward for being closer to the target
         if(self.cur_ep >= self.max_ep):
             done = True
-        if(distance < self.target_reached):
-            reward = 10
+        if(distance < self.target_distance):
+            reward = 1
             done = True
         # print(str(distance) + '  ' + str(cur_joint) + '  ' + str(self.cur_ep))
         return np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=0), reward, done, ""
