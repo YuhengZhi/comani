@@ -73,7 +73,7 @@ class Manipulation_Env(gym.Env):
     def reset(self):
         self.target_pos = np.zeros(3)
         radius = np.random.rand(1)[0] * (self.radius_max - self.radius_min) + self.radius_min
-        direction = np.random.rand(1)[0] * 6.28
+        direction = np.random.rand(1)[0] * 6 + 0.14
         self.target_pos[0] = radius * np.cos(direction)
         self.target_pos[1] = radius * np.sin(direction)
         self.target_pos[2] = 0.08
@@ -133,7 +133,10 @@ class Manipulation_Env(gym.Env):
         if(self.cur_ep >= self.max_ep):
             done = True
         if(distance < self.target_distance):
-            reward = 1
-            done = True
+            if(self.cur_ep < 5):
+                print("That's crazy! " + str(self.cur_ep))
+            else:
+                reward = 1
+                done = True
         # print(str(distance) + '  ' + str(cur_joint) + '  ' + str(self.cur_ep))
         return np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=0), reward, done, ""

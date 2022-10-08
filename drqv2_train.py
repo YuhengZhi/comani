@@ -18,7 +18,6 @@ faulthandler.enable()
 
 # Configuration variables
 num_train_frames = 1100000 # Taken from the medium difficulty rating
-num_train_frames = 10000
 
 eval_run = False # If this run is an evaluation run
 eval_episodes = 10
@@ -35,7 +34,7 @@ action_shape = (5,)
 feature_dim = 50
 hidden_dim = 1024
 critic_target_tau = 0.01
-num_expl_steps = 6000
+num_expl_steps = 15000
 update_every_steps = 2
 stddev_clip = 0.3
 use_tb = True
