@@ -38,12 +38,10 @@ class Manipulation_Env(gym.Env):
 
         # Set in the ball_position function
         self.sphere_pos_ll = np.asarray([0.12, 0.06, 0.005]) # Range of spawn locations for the sphere
-        self.sphere_pos_ur = np.asarray([0.16, 0.10, 0.005])
+        self.sphere_pos_ur = np.asarray([0.17, 0.10, 0.005])
         self.sphere_orientation = p.getQuaternionFromEuler([0,0,0])
 
         # Target position for the sphere
-        self.target_pos_ll = np.asarray([-0.20,0.56])
-        self.target_pos_ur = np.asarray([0.25, 0.6])
         self.target_reached = 0.05
         self.cur_ep = 0
         self.max_ep = 300
@@ -84,9 +82,16 @@ class Manipulation_Env(gym.Env):
         diff = self.sphere_pos_ur - self.sphere_pos_ll
         self.sphere_pos = self.sphere_pos_ll + coefficients * diff
 
-        coefficients = np.random.rand(2)
-        diff = self.target_pos_ur - self.target_pos_ll
-        self.target_pos = self.target_pos_ll + coefficients * diff
+        if(np.random.rand(1)[0] < 0.5):
+            print("X axis swap")
+            self.sphere_pos[0] = -self.sphere_pos[0]
+            print(self.sphere_pos)
+            print(type(self.sphere_pos))
+
+        self.target_pos = self.sphere_pos.copy()[:2]
+        self.target_pos[1] += 0.3
+        if(self.target_pos[1] > 0.5):
+            self.target_pos[1] = 0.5
 
         target_pos = np.zeros(3)
         target_pos[:2] = self.target_pos
@@ -129,9 +134,9 @@ class Manipulation_Env(gym.Env):
         #view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
         #    [action["camera"][0], action["camera"][1], 0], [0,1,0])
         #projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
-        view = p.computeViewMatrix([0, 0.28, self.camDistance],
-            [0, 0.28, 0], [0,1,0])
-        projection = p.computeProjectionMatrixFOV(self.fov / 2.7, self.aspect, 0.5, 5.0)
+        view = p.computeViewMatrix([0, 0, self.camDistance],
+            [0, 0, 0], [0,1,0])
+        projection = p.computeProjectionMatrixFOV(self.fov / 2.5, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.float32) / 255
         cur_joint = p.getJointStates(self.two_link, [0,1])
@@ -143,13 +148,13 @@ class Manipulation_Env(gym.Env):
         done = False
         distance = np.sum(np.square(self.target_pos - np.asarray(sphere_pos)))
         distance = np.sqrt(distance)
-        reward = -distance * 0.1
+        reward = 0
         # Some basic reward shaping
         # Return a small reward for being closer to the target
         if(self.cur_ep >= self.max_ep):
             done = True
         if(distance < self.target_reached):
-            reward = 10
+            reward = 1
             done = True
         # print(str(distance) + '  ' + str(cur_joint) + '  ' + str(self.cur_ep))
         return np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=0), reward, done, ""
