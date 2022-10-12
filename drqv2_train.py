@@ -13,11 +13,13 @@ from drqv2 import DrQV2Agent
 from pathlib import Path
 from dmc import ExtendedTimeStep
 from matplotlib import pyplot as plt
+from torch.utils.tensorboard import SummaryWriter
 
 faulthandler.enable()
 
 # Configuration variables
 num_train_frames = 1100000 # Taken from the medium difficulty rating
+num_train_frames = 10000
 
 eval_run = False # If this run is an evaluation run
 eval_episodes = 10
@@ -34,10 +36,12 @@ action_shape = (5,)
 feature_dim = 50
 hidden_dim = 1024
 critic_target_tau = 0.01
-num_expl_steps = 15000
+num_expl_steps = 4000
 update_every_steps = 2
 stddev_clip = 0.3
 use_tb = True
+metrics = None
+sw = None
 
 
 # Create recording directories
@@ -49,6 +53,9 @@ metric_dir = directory / "metrics"
 record_dir.mkdir(exist_ok=True)
 save_dir.mkdir(exist_ok=True)
 metric_dir.mkdir(exist_ok=True)
+
+# Create the tensorboard logger
+sw = SummaryWriter(log_dir = str(metric_dir))
 
 def log_line(line):
     print(line)
@@ -76,6 +83,12 @@ def evaluate():
             record.write((obs.transpose([1,2,0]) * 255).astype(np.uint8))
         print("Reward " + str(ep_reward) + "  Length " + str(ep_length))
         record.release()
+
+def log_metrics(metrics, steps):
+    for (key, value) in metrics.items():
+        sw.add_scalar(key, value, steps)
+    with open(str(metric_dir) + '/metric_' + str(steps) + '.dict', 'wb') as output_file:
+        pickle.dump(metrics, output_file)
 
 log_file = open('training_log', 'w')
 
@@ -154,6 +167,8 @@ for i in range(num_train_frames):
         action = agent.act(obs, i, eval_mode=False)
     if(i > num_expl_steps):
         metrics = agent.update(iter(replay_loader), i)
+    if(metrics is not None and sw is not None):
+        log_metrics(metrics, i)
     obs, reward, done, info = train_env.step(action)
     ep_reward += reward
 

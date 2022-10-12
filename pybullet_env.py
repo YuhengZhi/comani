@@ -42,7 +42,7 @@ class Manipulation_Env(gym.Env):
         self.target_distance = 0.04
 
         self.cur_ep = 0
-        self.max_ep = 300
+        self.max_ep = 75
 
         # Reward information
         self.success_reward = 10

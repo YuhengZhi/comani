@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
 
-train_log = open("train_output", 'r')
+train_log = open("training_log", 'r')
 lines = train_log.readlines()
 train_log.close()
 reward_history = []
