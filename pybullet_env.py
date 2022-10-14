@@ -42,11 +42,7 @@ class Manipulation_Env(gym.Env):
         self.target_distance = 0.04
 
         self.cur_ep = 0
-        self.max_ep = 75
-
-        # Reward information
-        self.success_reward = 10
-        self.reward_shaping = 4 # Max reward to assign for reward shaping
+        self.max_ep = 150
 
         # Also give color to arm
         p.changeVisualShape(self.two_link, 0, rgbaColor=[0.1,0.8,0.1,1.0])
@@ -137,6 +133,5 @@ class Manipulation_Env(gym.Env):
                 print("That's crazy! " + str(self.cur_ep))
             else:
                 reward = 1
-                done = True
         # print(str(distance) + '  ' + str(cur_joint) + '  ' + str(self.cur_ep))
         return np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=0), reward, done, ""

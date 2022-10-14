@@ -19,7 +19,6 @@ faulthandler.enable()
 
 # Configuration variables
 num_train_frames = 1100000 # Taken from the medium difficulty rating
-num_train_frames = 10000
 
 eval_run = False # If this run is an evaluation run
 eval_episodes = 10
@@ -169,6 +168,7 @@ for i in range(num_train_frames):
         metrics = agent.update(iter(replay_loader), i)
     if(metrics is not None and sw is not None):
         log_metrics(metrics, i)
+        metrics = None
     obs, reward, done, info = train_env.step(action)
     ep_reward += reward
 
