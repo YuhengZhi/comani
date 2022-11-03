@@ -105,7 +105,7 @@ class Manipulation_Env(gym.Env):
             - self.low[joint_acts:]) * (action[joint_acts:] + 1) / 2
         return full_action
     
-    def step(self, action):
+    def one_step(self, action):
         assert(self.action_space.contains(action))
         action = self.translate(action)
 
@@ -119,7 +119,7 @@ class Manipulation_Env(gym.Env):
         #projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
         view = p.computeViewMatrix([0, 0, self.camDistance],
             [0, 0, 0], [0,1,0])
-        projection = p.computeProjectionMatrixFOV(self.fov / 3, self.aspect, 0.5, 5.0)
+        projection = p.computeProjectionMatrixFOV(self.fov / 3.5, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.uint8).transpose(2,0,1)[:3]
         self.frame_stack.append(curimg)
@@ -145,3 +145,12 @@ class Manipulation_Env(gym.Env):
         # print(str(distance) + '  ' + str(cur_joint) + '  ' + str(self.cur_ep))
         obs = np.concatenate(list(self.frame_stack), axis=0)
         return obs, reward, done, ""
+    
+    def step(self, action):
+        # Step twice for two-step return
+        obs, reward, done, _ = self.one_step(action)
+        if(done):
+            return obs, reward, done, ""
+        first_reward = reward
+        obs, reward, done, _ = self.one_step(action)
+        return obs, first_reward + reward, done, ""
