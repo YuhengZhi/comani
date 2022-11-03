@@ -18,7 +18,7 @@ from torch.utils.tensorboard import SummaryWriter
 faulthandler.enable()
 
 # Configuration variables
-num_train_frames = 1100000 # Taken from the medium difficulty rating
+num_train_frames = 60000 # Taken from the medium difficulty rating
 
 eval_run = False # If this run is an evaluation run
 eval_episodes = 10
@@ -30,7 +30,7 @@ load_from = "" # Option to load a saved checkpoint
 # Agent configuration variables
 stddev_schedule = 'linear(1.0,0.1,100000)'
 learning_rate = 1e-4
-obs_shape = (3,84,84)
+obs_shape = (9,84,84)
 action_shape = (5,)
 feature_dim = 50
 hidden_dim = 1024
@@ -103,13 +103,13 @@ reward_history = []
 ep_reward = 0
 ep_num = 0
 
-data_specs = (specs.Array(obs_shape, np.float32, 'observation'),
+data_specs = (specs.Array(obs_shape, np.uint8, 'observation'),
               specs.Array(action_shape, np.float32, 'action'),
               specs.Array((1,), np.float32, 'reward'),
               specs.Array((1,), np.float32, 'discount'))
 replay_storage = ReplayBufferStorage(data_specs, replay_dir)
 replay_loader = make_replay_loader(
-    replay_dir, 100000, 256, 0, False,
+    replay_dir, 10000, 256, 0, False,
      3, 0.99
 )
 
@@ -155,7 +155,7 @@ for i in range(num_train_frames):
         if(ep_num % record_every == 0):
             record = cv2.VideoWriter(str(record_dir) + '/' + str(ep_num) + '.mp4',
                 cv2.VideoWriter_fourcc(*'mp4v'), 30, (84,84))
-            record.write((obs.transpose([1,2,0]) * 255).astype(np.uint8))
+            record.write(obs[:3,:,:].transpose(1,2,0))
 
         if(ep_num % save_every == 0):
             agent_file = save_dir / (str(ep_num)+'_save')
@@ -186,7 +186,7 @@ for i in range(num_train_frames):
     replay_storage.add(step)
     ep_length += 1
     if((ep_num % record_every == 0) and (ep_num > 0)):
-        record.write((obs.transpose([1,2,0]) * 255).astype(np.uint8))
+        record.write(obs[:3,:,:].transpose(1,2,0))
 
 # Pickle reward history for possible analysis
 with open(str(metric_dir) + '/' + 'reward_history_object', 'wb') as reward_file:

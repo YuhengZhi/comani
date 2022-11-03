@@ -13,6 +13,7 @@ import os
 import random
 import gym
 from gym import spaces
+from collections import deque
 
 # TODO: Consider adding an action repeat wrapper
 class Manipulation_Env(gym.Env):
@@ -42,14 +43,14 @@ class Manipulation_Env(gym.Env):
         self.target_distance = 0.04
 
         self.cur_ep = 0
-        self.max_ep = 150
+        self.max_ep = 1000
 
         # Also give color to arm
         p.changeVisualShape(self.two_link, 0, rgbaColor=[0.1,0.8,0.1,1.0])
         p.changeVisualShape(self.two_link, 2, rgbaColor=[0.1,0.1,0.8,1.0])
 
-        self.observation_space = spaces.Box(0, 1, shape=(3,84,84), dtype=float)
-        self.action_space = spaces.Box(-1, 1, shape=(5,), dtype=float)
+        self.observation_space = spaces.Box(0, 255, shape=(3,84,84), dtype=np.uint8)
+        self.action_space = spaces.Box(-1, 1, shape=(5,), dtype=np.float32)
         # Actual low and high action values
         # needed due to DrQv2 assuming -1 to 1 action space
         self.low = np.asarray([-15,-15,-0.7,-0.7,1], dtype=float)
@@ -59,6 +60,9 @@ class Manipulation_Env(gym.Env):
         self.pixelHeight = 84
         self.aspect = 1
         self.camDistance = 2
+
+        self.stack_num = 3
+        self.frame_stack = deque([], maxlen=self.stack_num)
 
         self.fov = 60 # Default fov
     
@@ -84,9 +88,13 @@ class Manipulation_Env(gym.Env):
         view = p.computeViewMatrix([0,0,self.camDistance], [0,0,0], [0,1,0])
         projection = p.computeProjectionMatrixFOV(self.fov, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
-        curimg = np.asarray(curimg, dtype=np.float32) / 255
+        curimg = np.asarray(curimg, dtype=np.uint8).transpose(2,0,1)[:3]
+        for i in range(self.stack_num):
+            self.frame_stack.append(curimg)
         self.cur_ep = 0
-        return np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=0)
+
+        obs = np.concatenate(list(self.frame_stack), axis=0)
+        return obs
     
     def translate(self, action):
         full_action = {}
@@ -113,7 +121,8 @@ class Manipulation_Env(gym.Env):
             [0, 0, 0], [0,1,0])
         projection = p.computeProjectionMatrixFOV(self.fov / 3, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
-        curimg = np.asarray(curimg, dtype=np.float32) / 255
+        curimg = np.asarray(curimg, dtype=np.uint8).transpose(2,0,1)[:3]
+        self.frame_stack.append(curimg)
         cur_joint = p.getJointStates(self.two_link, [0,1])
         cur_joint = [cur_joint[0][0], cur_joint[1][0]]
 
@@ -134,4 +143,5 @@ class Manipulation_Env(gym.Env):
             else:
                 reward = 1
         # print(str(distance) + '  ' + str(cur_joint) + '  ' + str(self.cur_ep))
-        return np.stack([curimg[:,:,2], curimg[:,:,1], curimg[:,:,0]], axis=0), reward, done, ""
+        obs = np.concatenate(list(self.frame_stack), axis=0)
+        return obs, reward, done, ""
