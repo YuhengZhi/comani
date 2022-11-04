@@ -18,7 +18,8 @@ from torch.utils.tensorboard import SummaryWriter
 faulthandler.enable()
 
 # Configuration variables
-num_train_frames = 60000 # Taken from the medium difficulty rating
+num_train_frames = 1600000 # Taken from the medium difficulty rating
+num_train_frames = 10000
 
 eval_run = False # If this run is an evaluation run
 eval_episodes = 10
@@ -109,7 +110,7 @@ data_specs = (specs.Array(obs_shape, np.uint8, 'observation'),
               specs.Array((1,), np.float32, 'discount'))
 replay_storage = ReplayBufferStorage(data_specs, replay_dir)
 replay_loader = make_replay_loader(
-    replay_dir, 10000, 256, 0, False,
+    replay_dir, 400000, 256, 0, False,
      3, 0.99
 )
 
