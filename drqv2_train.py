@@ -19,14 +19,13 @@ faulthandler.enable()
 
 # Configuration variables
 num_train_frames = 1600000 # Taken from the medium difficulty rating
-num_train_frames = 10000
 
-eval_run = False # If this run is an evaluation run
+eval_run = True # If this run is an evaluation run
 eval_episodes = 10
 record_every = 1 # Record a video every record_every episodes
 save_every = 200 # Save an agent snapshot every save_every episodes
 
-load_from = "" # Option to load a saved checkpoint
+load_from = "snapshots/2600_save" # Option to load a saved checkpoint
 
 # Agent configuration variables
 stddev_schedule = 'linear(1.0,0.1,100000)'
@@ -36,7 +35,7 @@ action_shape = (5,)
 feature_dim = 50
 hidden_dim = 1024
 critic_target_tau = 0.01
-num_expl_steps = 4000
+num_expl_steps = 6000
 update_every_steps = 2
 stddev_clip = 0.3
 use_tb = True
@@ -68,7 +67,7 @@ def evaluate():
         obs = train_env.reset()
         record = cv2.VideoWriter(str(eval_dir) + '/' + str(i) + '.mp4',
             cv2.VideoWriter_fourcc(*'mp4v'), 30, (84,84))
-        record.write((obs.transpose([1,2,0]) * 255).astype(np.uint8))
+        record.write(obs[:3,:,:].transpose(1,2,0))
         done = False
         ep_length = 0
         ep_reward = 0
@@ -76,11 +75,11 @@ def evaluate():
 
         while(not done):
             with torch.no_grad(), eval_mode(agent):
-                action = agent.act(obs, i, eval_mode = False)
+                action = agent.act(obs, ep_length, eval_mode = True)
             obs, reward, done, info = train_env.step(action)
             ep_reward += reward
             ep_length += 1
-            record.write((obs.transpose([1,2,0]) * 255).astype(np.uint8))
+            record.write(obs[:3,:,:].transpose(1,2,0))
         print("Reward " + str(ep_reward) + "  Length " + str(ep_length))
         record.release()
 
