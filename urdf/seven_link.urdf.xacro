@@ -1,0 +1,109 @@
+<?xml version="1.0" ?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="reacher_seven_links">
+	<xacro:macro name="link_group" params="link_number">
+		<link name="invisible_${link_number}">
+			<inertial>
+				<origin rpy="0.00000 -0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+				<mass value="0.00000"/>
+				<inertia ixx="0.00000" ixy="0" ixz="0" iyy="0.00000" iyz="0" izz="0.00000"/>
+			</inertial>
+		</link>
+		<link name="cylinder_${link_number}">
+			<inertial>
+				<origin rpy="0.00000 -0.00000 0.00000" xyz="0.02500 0.00000 0.00000"/>
+				<mass value="0.001"/>
+				<inertia ixx="0.00000" ixy="0" ixz="0" iyy="0.00004" iyz="0" izz="0.00004"/>
+			</inertial>
+			<collision>
+				<origin rpy="0.00000 1.57080 -0.00000" xyz="0.02500 0.00000 0.00000"/>
+				<geometry>
+					<capsule length="0.05000" radius="0.01000"/>
+				</geometry>
+			</collision>
+		</link>
+	</xacro:macro>
+
+	<xacro:macro name="joint_group" params="angle joint_number force">
+		<joint name="joint_revolute_${joint_number+1}" type="revolute">
+			<parent link="cylinder_${joint_number}"/>
+			<child link="invisible_${joint_number+1}"/>
+			<limit effort="${force}" lower="${-angle}" upper="${angle}" velocity="5.0"/>
+			<dynamics damping="0.0001" friction="0.0001"/>
+			<origin rpy="0.00000 -0.00000 0.00000" xyz="0.05000 0.00000 0.00000"/>
+			<axis xyz="0.00000 0.00000 1.00000"/>
+		</joint>
+
+		<joint name="joint_fix_${joint_number+1}" type="fixed">
+			<parent link="invisible_${joint_number+1}"/>
+			<child link="cylinder_${joint_number+1}"/>
+			<origin rpy="0.00000 -0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+		</joint>
+	</xacro:macro>
+
+	<link name="base">
+		<inertial>
+			<origin rpy="0.00000 -0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+			<mass value="0.00000"/>
+			<inertia ixx="0.00000" ixy="0" ixz="0" iyy="0.00000" iyz="0" izz="0.00000"/>
+		</inertial>
+		<collision>
+			<origin rpy="0.00000 -0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+			<geometry>
+				<sphere radius="0.01000"/>
+			</geometry>
+		</collision>
+	</link>
+	<link name="cylinder_0">
+		<inertial>
+			<origin rpy="0.00000 -0.00000 0.00000" xyz="0.02500 0.00000 0.00000"/>
+			<mass value="0.001"/>
+			<inertia ixx="0.00000" ixy="0" ixz="0" iyy="0.00004" iyz="0" izz="0.00004"/>
+		</inertial>
+		<collision>
+			<origin rpy="0.00000 1.57080 -0.00000" xyz="0.02500 0.00000 0.00000"/>
+			<geometry>
+				<capsule length="0.05000" radius="0.01000"/>
+			</geometry>
+		</collision>
+	</link>
+	<joint name="joint_revolute_0" type="continuous">
+		<parent link="base"/>
+		<child link="cylinder_0"/>
+		<limit effort="80.0" velocity="5.0"/>
+		<dynamics damping="0" friction="0.0001"/>
+		<origin rpy="0.00000 -0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+		<axis xyz="0.00000 0.00000 1.00000"/>
+	</joint>
+	<xacro:link_group link_number="1"/>
+	<xacro:link_group link_number="2"/>
+	<xacro:link_group link_number="3"/>
+	<xacro:link_group link_number="4"/>
+	<xacro:link_group link_number="5"/>
+	<xacro:link_group link_number="6"/>
+	<xacro:joint_group angle="3.05" joint_number="0" force="200"/>
+	<xacro:joint_group angle="3.05" joint_number="1" force="1"/>
+	<xacro:joint_group angle="3.05" joint_number="2" force="1"/>
+	<xacro:joint_group angle="3.05" joint_number="3" force="1"/>
+	<xacro:joint_group angle="3.05" joint_number="4" force="1"/>
+	<xacro:joint_group angle="3.05" joint_number="5" force="1"/>
+	<link name="fingertip">
+		<inertial>
+			<origin rpy="0.00000 -0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+			<mass value="0.000"/>
+			<inertia ixx="0.00000" ixy="0" ixz="0" iyy="0.00000" iyz="0" izz="0.00000"/>
+		</inertial>
+		<collision>
+			<origin rpy="0.00000 -0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+			<geometry>
+				<sphere radius="0.01000"/>
+			</geometry>
+		</collision>
+	</link>
+	<joint name="joint_fingertip" type="fixed">
+		<parent link="cylinder_6"/>
+		<child link="fingertip"/>
+		<origin rpy="0.00000 -0.00000 0.00000" xyz="0.06000 0.00000 0.00000"/>
+		<axis xyz="0.00000 0.00000 0.00000"/>
+	</joint>
+</robot>
