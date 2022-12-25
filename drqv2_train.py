@@ -25,6 +25,7 @@ eval_run = False # If this run is an evaluation run
 eval_episodes = 10
 record_every = 1 # Record a video every record_every episodes
 save_every = 200 # Save an agent snapshot every save_every episodes
+replay_buffer_frames = 400000
 
 load_from = "" # Option to load a saved checkpoint
 
@@ -32,7 +33,7 @@ load_from = "" # Option to load a saved checkpoint
 stddev_schedule = 'linear(1.0,0.1,100000)'
 learning_rate = 1e-4
 obs_shape = (9,84,84)
-action_shape = (5,)
+action_shape = (10,)
 feature_dim = 50
 hidden_dim = 1024
 critic_target_tau = 0.01
@@ -110,7 +111,7 @@ data_specs = (specs.Array(obs_shape, np.uint8, 'observation'),
               specs.Array((1,), np.float32, 'discount'))
 replay_storage = ReplayBufferStorage(data_specs, replay_dir)
 replay_loader = make_replay_loader(
-    replay_dir, 400000, 256, 0, False,
+    replay_dir, replay_buffer_frames, 256, 0, False,
      3, 0.99
 )
 
@@ -146,7 +147,7 @@ for i in range(num_train_frames):
             reward = 0,
             discount = 1,
             observation = obs,
-            action = np.zeros(5, dtype=np.float32)
+            action = np.zeros(action_shape, dtype=np.float32)
         )
         ep_num += 1
 

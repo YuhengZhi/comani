@@ -33,7 +33,7 @@ class Manipulation_Env(gym.Env):
         directory = '/'.join(directory[:-1])
         self.plane = p.loadURDF("plane.urdf")
         self.link_arm = p.loadURDF(directory + "/urdf/seven_link.urdf", initialPos, initialOrientation)
-        self.target_sphere = p.loadURDF(directory + '/urdf/sphere_red_target.urdf', globalScaling=0.05, useFixedBase=True)
+        self.target_sphere = p.loadURDF(directory + '/urdf/sphere_green.urdf', globalScaling=0.05, useFixedBase=True)
         #self.fixation = p.createConstraint(self.plane, -1, self.two_link, 0, p.JOINT_FIXED, [0,0,1], [0,0,1], [0,0,0])
 
         # Set in the ball_position function
