@@ -81,12 +81,12 @@
 	<xacro:link_group link_number="4"/>
 	<xacro:link_group link_number="5"/>
 	<xacro:link_group link_number="6"/>
-	<xacro:joint_group angle="3.05" joint_number="0" force="200"/>
-	<xacro:joint_group angle="3.05" joint_number="1" force="1"/>
-	<xacro:joint_group angle="3.05" joint_number="2" force="1"/>
-	<xacro:joint_group angle="3.05" joint_number="3" force="1"/>
-	<xacro:joint_group angle="3.05" joint_number="4" force="1"/>
-	<xacro:joint_group angle="3.05" joint_number="5" force="1"/>
+	<xacro:joint_group angle="3.05" joint_number="0" force="80"/>
+	<xacro:joint_group angle="3.05" joint_number="1" force="80"/>
+	<xacro:joint_group angle="3.05" joint_number="2" force="80"/>
+	<xacro:joint_group angle="3.05" joint_number="3" force="80"/>
+	<xacro:joint_group angle="3.05" joint_number="4" force="80"/>
+	<xacro:joint_group angle="3.05" joint_number="5" force="80"/>
 	<link name="fingertip">
 		<inertial>
 			<origin rpy="0.00000 -0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>

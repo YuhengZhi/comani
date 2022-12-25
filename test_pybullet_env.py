@@ -11,7 +11,8 @@ total_reward = 0
 step_count = 0
 while(not done):
     step_count += 1
-    obs, reward, done, info = env.step(np.asarray([0.5,0.5,0,0,-1]))
+    obs, reward, done, info = env.step(np.asarray([-0.1] * 3 + [0.1] * 4 + [0, 0, 1], dtype = np.float32))
+    obs = obs[:3, :, :]
     outVideo.write((obs.transpose([1,2,0])*255).astype(np.uint8))
     total_reward += reward
 print(reward)

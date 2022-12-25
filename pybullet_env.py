@@ -1,7 +1,7 @@
 # This is a python class to be used for a 2D grasping
 # experiment. The camera can be moved in two directions
-
 # This class provides a Gym wrapper for a pybullet simulation
+# This version has a seven link arm
 
 import pybullet as p
 import time
@@ -32,29 +32,42 @@ class Manipulation_Env(gym.Env):
         directory = os.path.realpath(__file__).split('/')
         directory = '/'.join(directory[:-1])
         self.plane = p.loadURDF("plane.urdf")
-        self.two_link = p.loadURDF(directory + "/urdf/two_link.urdf", initialPos, initialOrientation)
-        self.target_sphere = p.loadURDF(directory + '/urdf/sphere_blue.urdf', globalScaling=0.05, useFixedBase=True)
+        self.link_arm = p.loadURDF(directory + "/urdf/seven_link.urdf", initialPos, initialOrientation)
+        self.target_sphere = p.loadURDF(directory + '/urdf/sphere_red_target.urdf', globalScaling=0.05, useFixedBase=True)
         #self.fixation = p.createConstraint(self.plane, -1, self.two_link, 0, p.JOINT_FIXED, [0,0,1], [0,0,1], [0,0,0])
 
         # Set in the ball_position function
         self.sphere_orientation = p.getQuaternionFromEuler([0,0,0])
-        self.radius_min = 0.07
-        self.radius_max = 0.20
-        self.target_distance = 0.04
+        self.radius_min = 0.15
+        self.radius_max = 0.32
+        self.angle_zone = 20 # Zone for preventing easy hits, in degrees
+        self.radius_zone_min = 0.28 # Radius for zone for preventing easy hits
+        self.angle_min = 7 # Minimum angle overall
+        self.target_distance = 0.04  # Threshold distance for detecting a hit
 
         self.cur_ep = 0
         self.max_ep = 1000
 
-        # Also give color to arm
-        p.changeVisualShape(self.two_link, 0, rgbaColor=[0.1,0.8,0.1,1.0])
-        p.changeVisualShape(self.two_link, 2, rgbaColor=[0.1,0.1,0.8,1.0])
+        # Joint numbers in the simulator
+        self.arm_joints = [0, 1, 3, 5, 7, 9, 11]
+        self.joint_actions = len(self.arm_joints)
 
+        # Also give color to arm
+        # Give a special color to the fingertip link
+        for i in range(11):
+            p.changeVisualShape(self.link_arm, i, rgbaColor=[0.1,0.1,0.8,1.0])
+        p.changeVisualShape(self.link_arm, 12, rgbaColor=[0.8,0.1,0.1,1.0])
+        p.changeVisualShape(self.link_arm, 13, rgbaColor=[0.8,0.1,0.1,1.0])
+
+        # Observation space is a 3x84x84 image
+        # Action space has the controls for the 7 connections
+        # and then the camera location and zoom
         self.observation_space = spaces.Box(0, 255, shape=(3,84,84), dtype=np.uint8)
-        self.action_space = spaces.Box(-1, 1, shape=(5,), dtype=np.float32)
+        self.action_space = spaces.Box(-1, 1, shape=(10,), dtype=np.float32)
         # Actual low and high action values
         # needed due to DrQv2 assuming -1 to 1 action space
-        self.low = np.asarray([-15,-15,-0.7,-0.7,1.8], dtype=float)
-        self.high = np.asarray([15,15,0.7,0.7,4.5], dtype=float)
+        self.low = np.asarray([-5] * 7 + [-0.7, -0.7, 1.8], dtype=float)
+        self.high = np.asarray([5] * 7 + [0.7, 0.7, 4.5], dtype=float)
 
         self.pixelWidth = 84
         self.pixelHeight = 84
@@ -71,18 +84,12 @@ class Manipulation_Env(gym.Env):
         p.disconnect()
 
     def reset(self):
-        self.target_pos = np.zeros(3)
-        radius = np.random.rand(1)[0] * (self.radius_max - self.radius_min) + self.radius_min
-        direction = np.random.rand(1)[0] * 6 + 0.14
-        self.target_pos[0] = radius * np.cos(direction)
-        self.target_pos[1] = radius * np.sin(direction)
-        self.target_pos[2] = 0.08
-        p.resetBasePositionAndOrientation(self.target_sphere, self.target_pos, self.sphere_orientation)
+        self.handle_target_reset()
 
         # Reset joint position and velocity control
-        p.resetJointState(self.two_link, 0, 0)
-        p.resetJointState(self.two_link, 1, 0)
-        p.setJointMotorControlArray(self.two_link, [0,1], p.VELOCITY_CONTROL, targetVelocities=[0]*2, forces=[20,20])
+        for joint_number in self.arm_joints:
+            p.resetJointState(self.link_arm, joint_number, 0)
+        p.setJointMotorControlArray(self.link_arm, self.arm_joints, p.VELOCITY_CONTROL, targetVelocities = [0] * 7, forces = [80] * 7)
         p.stepSimulation()
         time.sleep(0.5) # Return the initial state
         view = p.computeViewMatrix([0.7,0.7,self.camDistance], [0.7,0.7,0], [0,1,0])
@@ -96,13 +103,13 @@ class Manipulation_Env(gym.Env):
         obs = np.concatenate(list(self.frame_stack), axis=0)
         return obs
     
+    # Translate action from -1 to 1 to actual values
     def translate(self, action):
         full_action = {}
-        joint_acts = 2
-        full_action["joint"] = self.low[:joint_acts] + (self.high[:joint_acts]\
-            - self.low[:joint_acts]) * (action[:joint_acts] + 1) / 2
-        full_action["camera"] = self.low[joint_acts:] + (self.high[joint_acts:]\
-            - self.low[joint_acts:]) * (action[joint_acts:] + 1) / 2
+        full_action["joint"] = self.low[:self.joint_actions] + (self.high[:self.joint_actions]\
+            - self.low[:self.joint_actions]) * (action[:self.joint_actions] + 1) / 2
+        full_action["camera"] = self.low[self.joint_actions:] + (self.high[self.joint_actions:]\
+            - self.low[self.joint_actions:]) * (action[self.joint_actions:] + 1) / 2
         return full_action
     
     def one_step(self, action):
@@ -110,7 +117,7 @@ class Manipulation_Env(gym.Env):
         action = self.translate(action)
 
         # Ask pybullet to set the joints to the indicated velocities        
-        p.setJointMotorControlArray(self.two_link, [0,1], p.VELOCITY_CONTROL, targetVelocities=action["joint"], forces=[20,20])
+        p.setJointMotorControlArray(self.link_arm, self.arm_joints, p.VELOCITY_CONTROL, targetVelocities = action["joint"], forces = [80] * 7)
         p.stepSimulation()
         time.sleep(1.0/240)
         view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
@@ -119,11 +126,11 @@ class Manipulation_Env(gym.Env):
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.uint8).transpose(2,0,1)[:3]
         self.frame_stack.append(curimg)
-        cur_joint = p.getJointStates(self.two_link, [0,1])
+        cur_joint = p.getJointStates(self.link_arm, [0,1])
         cur_joint = [cur_joint[0][0], cur_joint[1][0]]
 
         # Calculate the distance from the fingertip link to the target sphere
-        tip_position = np.asarray(p.getLinkState(self.two_link, 3)[0][:2])
+        tip_position = np.asarray(p.getLinkState(self.link_arm, 3)[0][:2])
         self.cur_ep += 1
         done = False
         distance = np.sum(np.square(self.target_pos[:2] - tip_position))
@@ -141,6 +148,22 @@ class Manipulation_Env(gym.Env):
         # print(str(distance) + '  ' + str(cur_joint) + '  ' + str(self.cur_ep))
         obs = np.concatenate(list(self.frame_stack), axis=0)
         return obs, reward, done, ""
+    
+    def handle_target_reset(self):
+        self.target_pos = np.zeros(3)
+        flag = True  # Generate a random target position
+        while(flag):  # and go again if the position is in the easy zone
+            random_val = np.random.rand(2)
+            angle = self.angle_min + random_val[0] * (360 - 2 * self.angle_min)
+            radius = self.radius_min + random_val[1] * (self.radius_max - self.radius_min)
+            if((angle > self.angle_zone)
+                or (angle < 360 - self.angle_zone)
+                or (radius < self.radius_zone_min)):
+                flag = False
+        self.target_pos[0] = radius * np.cos(angle / 180 * np.pi)
+        self.target_pos[1] = radius * np.sin(angle / 180 * np.pi)
+        self.target_pos[2] = 0.08
+        p.resetBasePositionAndOrientation(self.target_sphere, self.target_pos, self.sphere_orientation)
     
     def step(self, action):
         # Step twice for two-step return
