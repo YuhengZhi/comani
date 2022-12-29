@@ -120,9 +120,11 @@ class Manipulation_Env(gym.Env):
         p.setJointMotorControlArray(self.link_arm, self.arm_joints, p.VELOCITY_CONTROL, targetVelocities = action["joint"], forces = [80] * 7)
         p.stepSimulation()
         time.sleep(1.0/240)
-        view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
-            [action["camera"][0], action["camera"][1], 0], [0,1,0])
-        projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
+        #view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
+        #    [action["camera"][0], action["camera"][1], 0], [0,1,0])
+        #projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
+        view = p.computeViewMatrix([0, 0, self.camDistance], [0, 0, 0], [0, 1, 0])
+        projection = p.computeProjectionMatrixFOV(self.fov / 2.2, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.uint8).transpose(2,0,1)[:3]
         self.frame_stack.append(curimg)

@@ -1,8 +1,8 @@
 from matplotlib import pyplot as plt
 
-smooth = 200
+smooth = 10
 
-train_log = open("trainings/reacher_short_stay/training_log", 'r')
+train_log = open("training_log", 'r')
 lines = train_log.readlines()
 train_log.close()
 reward_history = []
@@ -25,7 +25,7 @@ fig, ax = plt.subplots(1, 1, figsize=(12,10))
 ax.set_ylim([0, 20])
 ax.plot(x_axis, smoothed)
 plt.title("Smoothed episode total reward " + str(smooth))
-plt.savefig("trainings/reacher_short_stay/reward_history_" + str(smooth) + ".png")
+plt.savefig("reward_history_" + str(smooth) + ".png")
 
 # Code for displaying the raw reward. Usually not very clear due to
 # high number of episodes
