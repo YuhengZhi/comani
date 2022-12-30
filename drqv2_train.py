@@ -19,6 +19,7 @@ faulthandler.enable()
 
 # Configuration variables
 num_train_frames = 1600000 # Taken from the medium difficulty rating
+num_train_frames = 10000
 
 eval_run = False # If this run is an evaluation run
 eval_episodes = 10

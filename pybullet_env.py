@@ -50,6 +50,7 @@ class Manipulation_Env(gym.Env):
 
         # Joint numbers in the simulator
         self.arm_joints = [0, 1, 3, 5, 7, 9, 11]
+        self.fingertip_code = 13 # The link ID of the fingertip of the robot
         self.joint_actions = len(self.arm_joints)
 
         # Also give color to arm
@@ -132,7 +133,7 @@ class Manipulation_Env(gym.Env):
         cur_joint = [cur_joint[0][0], cur_joint[1][0]]
 
         # Calculate the distance from the fingertip link to the target sphere
-        tip_position = np.asarray(p.getLinkState(self.link_arm, 3)[0][:2])
+        tip_position = np.asarray(p.getLinkState(self.link_arm, self.fingertip_code)[0][:2])
         self.cur_ep += 1
         done = False
         distance = np.sum(np.square(self.target_pos[:2] - tip_position))
