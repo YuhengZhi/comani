@@ -22,7 +22,8 @@ for i in range(len(reward_history) - smooth):
     sum += reward_history[i + smooth]
 x_axis = [i+1 for i in range(len(smoothed))]
 fig, ax = plt.subplots(1, 1, figsize=(12,10))
-ax.set_ylim([0, 20])
+max_reward = max(20, max(reward_history))
+ax.set_ylim([0, max_reward])
 ax.plot(x_axis, smoothed)
 plt.title("Smoothed episode total reward " + str(smooth))
 plt.savefig("reward_history_" + str(smooth) + ".png")
