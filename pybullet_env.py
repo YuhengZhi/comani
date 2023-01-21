@@ -136,16 +136,14 @@ class Manipulation_Env(gym.Env):
         done = False
         distance = np.sum(np.square(self.target_pos[:2] - tip_position))
         distance = np.sqrt(distance)
-        reward = 0
         # Some basic reward shaping
         # Return a small reward for being closer to the target
         if(self.cur_ep >= self.max_ep):
             done = True
         if(distance < self.target_distance):
-            if(self.cur_ep < 5):
-                print("That's crazy! " + str(self.cur_ep))
-            else:
-                reward = 1
+            reward = 1
+        else:
+            reward = -distance
         # print(str(distance) + '  ' + str(cur_joint) + '  ' + str(self.cur_ep))
         obs = np.concatenate(list(self.frame_stack), axis=0)
         return obs, reward, done, ""
