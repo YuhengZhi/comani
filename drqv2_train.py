@@ -21,13 +21,13 @@ faulthandler.enable()
 # Configuration variables
 num_train_frames = 1600000 # Taken from the medium difficulty rating
 
-eval_run = False # If this run is an evaluation run
-eval_episodes = 10
+eval_run = True # If this run is an evaluation run
+eval_episodes = 5
 record_every = 1 # Record a video every record_every episodes
 save_every = 200 # Save an agent snapshot every save_every episodes
 replay_buffer_frames = 400000
 
-load_from = "" # Option to load a saved checkpoint
+load_from = "snapshots/3000_save" # Option to load a saved checkpoint
 
 # Agent configuration variables
 stddev_schedule = 'linear(1.0,0.1,100000)'
@@ -63,25 +63,48 @@ def log_line(line):
     log_file.write(line + '\n')
 
 def evaluate():
+    train_env.enable_global_view()
+    train_env.global_view = True
     eval_dir = directory / "evaluation"
     eval_dir.mkdir(exist_ok=True)
     for i in range(eval_episodes):
         obs = train_env.reset()
         record = cv2.VideoWriter(str(eval_dir) + '/' + str(i) + '.mp4',
-            cv2.VideoWriter_fourcc(*'mp4v'), 30, (84,84))
-        record.write((obs.transpose([1,2,0]) * 255).astype(np.uint8))
+            cv2.VideoWriter_fourcc(*'mp4v'), 30, (train_env.global_pixel * 2, train_env.global_pixel))
+        record.write(obs[:3,:,:].transpose(1,2,0))
         done = False
         ep_length = 0
         ep_reward = 0
+
+        pixel_length_ratio = 350
+        line_width = 3
         print("Evaluate episode " + str(i))
+
+        action = np.asarray([0] * 9 + [-1])
 
         while(not done):
             with torch.no_grad(), eval_mode(agent):
-                action = agent.act(obs, i, eval_mode = False)
+                prev_action = action
+                action = agent.act(obs, ep_length, eval_mode = True)
             obs, reward, done, info = train_env.step(action)
+            region_image = obs[:3,:,:].transpose(1,2,0)
+            region_image = cv2.resize(region_image, (train_env.global_pixel, train_env.global_pixel))
             ep_reward += reward
             ep_length += 1
-            record.write((obs.transpose([1,2,0]) * 255).astype(np.uint8))
+            global_image = train_env.global_image.astype(np.uint8)
+            # Now draw the rectangle to describe the view region selected by the agent
+            # Somehow opencv rectangle doesn't work so I'm drawing it manually
+            translated_actions = train_env.low + (train_env.high - train_env.low) * (prev_action + 1) / 2
+            cur_fov = translated_actions[9]
+            cur_x = translated_actions[7]
+            cur_y = translated_actions[8]
+            view_pixels = train_env.global_pixel / 2 * 1.4 / cur_fov
+            upper_left = (cur_x * pixel_length_ratio - view_pixels + train_env.global_pixel / 2, -cur_y * pixel_length_ratio + view_pixels + train_env.global_pixel / 2)
+            lower_right = (cur_x * pixel_length_ratio + view_pixels + train_env.global_pixel / 2, -cur_y * pixel_length_ratio - view_pixels + train_env.global_pixel / 2)
+            upper_left = (int(upper_left[0]), int(upper_left[1]))
+            lower_right = (int(lower_right[0]), int(lower_right[1]))
+            global_image = cv2.rectangle(global_image, upper_left, lower_right, (255,0,0), 4)
+            record.write(np.concatenate([region_image, global_image], axis=1))
         print("Reward " + str(ep_reward) + "  Length " + str(ep_length))
         record.release()
 

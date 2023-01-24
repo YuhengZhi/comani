@@ -17,10 +17,7 @@ from collections import deque
 
 # TODO: Consider adding an action repeat wrapper
 class Manipulation_Env(gym.Env):
-    def __init__(self, noise=0.0, record=False):
-        self.noise = noise
-        self.record = record
-
+    def __init__(self):
         self.physicsClient = p.connect(p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
         p.setGravity(0,0,-10)
@@ -74,6 +71,8 @@ class Manipulation_Env(gym.Env):
         self.pixelHeight = 84
         self.aspect = 1
         self.camDistance = 2
+        self.global_view = False # This can be enabled by calling the enable_global_view function
+        self.global_pixel = 640 # Global view pixel width and height
 
         self.stack_num = 3
         self.frame_stack = deque([], maxlen=self.stack_num)
@@ -93,6 +92,9 @@ class Manipulation_Env(gym.Env):
         p.setJointMotorControlArray(self.link_arm, self.arm_joints, p.VELOCITY_CONTROL, targetVelocities = [0] * 7, forces = [80] * 7)
         p.stepSimulation()
         time.sleep(0.5) # Return the initial state
+        if(self.global_view):
+            _, _, global_image, _, _ = p.getCameraImage(self.global_pixel, self.global_pixel, self.global_view_matrix, self.global_projection)
+            self.global_image = np.asarray(global_image, dtype=np.uint8)[:,:,:3]
         view = p.computeViewMatrix([0.7,0.7,self.camDistance], [0.7,0.7,0], [0,1,0])
         projection = p.computeProjectionMatrixFOV(self.fov / 1.8, self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
@@ -121,6 +123,9 @@ class Manipulation_Env(gym.Env):
         p.setJointMotorControlArray(self.link_arm, self.arm_joints, p.VELOCITY_CONTROL, targetVelocities = action["joint"], forces = [80] * 7)
         p.stepSimulation()
         time.sleep(1.0/240)
+        if(self.global_view):
+            _, _, global_image, _, _ = p.getCameraImage(self.global_pixel, self.global_pixel, self.global_view_matrix, self.global_projection)
+            self.global_image = np.asarray(global_image, dtype=np.uint8)[:,:,:3]
         view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
             [action["camera"][0], action["camera"][1], 0], [0,1,0])
         projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
@@ -172,3 +177,8 @@ class Manipulation_Env(gym.Env):
         first_reward = reward
         obs, reward, done, _ = self.one_step(action)
         return obs, first_reward + reward, done, ""
+
+    def enable_global_view(self):
+        self.global_view = True
+        self.global_view_matrix = p.computeViewMatrix([0,0,self.camDistance], [0,0,0], [0,1,0])
+        self.global_projection = p.computeProjectionMatrixFOV(self.fov / 1.5, self.aspect, 0.5, 5.0)
