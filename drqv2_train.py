@@ -26,7 +26,7 @@ record_every = 1 # Record a video every record_every episodes
 save_every = 200 # Save an agent snapshot every save_every episodes
 replay_buffer_frames = 400000
 
-load_from = "snapshots/2600_save" # Option to load a saved checkpoint
+load_from = "snapshots/3000_save" # Option to load a saved checkpoint
 
 # Agent configuration variables
 stddev_schedule = 'linear(1.0,0.1,100000)'
@@ -36,7 +36,7 @@ action_shape = (10,)
 feature_dim = 50
 hidden_dim = 1024
 critic_target_tau = 0.01
-num_expl_steps = 6000
+num_expl_steps = 4000
 update_every_steps = 2
 stddev_clip = 0.3
 use_tb = True
@@ -79,8 +79,11 @@ def evaluate():
         line_width = 3
         print("Evaluate episode " + str(i))
 
+        action = np.asarray([0] * 9 + [-1])
+
         while(not done):
             with torch.no_grad(), eval_mode(agent):
+                prev_action = action
                 action = agent.act(obs, ep_length, eval_mode = True)
             obs, reward, done, info = train_env.step(action)
             region_image = obs[:3,:,:].transpose(1,2,0)
@@ -90,10 +93,10 @@ def evaluate():
             global_image = train_env.global_image.astype(np.uint8)
             # Now draw the rectangle to describe the view region selected by the agent
             # Somehow opencv rectangle doesn't work so I'm drawing it manually
-            translated_actions = train_env.low + (train_env.high - train_env.low) * (action + 1) / 2
-            cur_fov = translated_actions[4]
-            cur_x = translated_actions[2]
-            cur_y = translated_actions[3]
+            translated_actions = train_env.low + (train_env.high - train_env.low) * (prev_action + 1) / 2
+            cur_fov = translated_actions[9]
+            cur_x = translated_actions[7]
+            cur_y = translated_actions[8]
             view_pixels = train_env.global_pixel / 2 * 1.4 / cur_fov
             upper_left = (cur_x * pixel_length_ratio - view_pixels + train_env.global_pixel / 2, -cur_y * pixel_length_ratio + view_pixels + train_env.global_pixel / 2)
             lower_right = (cur_x * pixel_length_ratio + view_pixels + train_env.global_pixel / 2, -cur_y * pixel_length_ratio - view_pixels + train_env.global_pixel / 2)
