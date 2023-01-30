@@ -64,8 +64,11 @@ class Manipulation_Env(gym.Env):
         self.action_space = spaces.Box(-1, 1, shape=(10,), dtype=np.float32)
         # Actual low and high action values
         # needed due to DrQv2 assuming -1 to 1 action space
-        self.low = np.asarray([-5] * 7 + [-0.7, -0.7, 1.8], dtype=float)
-        self.high = np.asarray([5] * 7 + [0.7, 0.7, 4.5], dtype=float)
+        self.low = np.asarray([-5] * 7 + [-0.05, -0.05, -0.1], dtype=float)
+        self.high = np.asarray([5] * 7 + [0.05, 0.05, 0.1], dtype=float)
+        self.camera_low = np.asarray([-0.7, -0.7, 1.8], dtype=float) # Range of motion for the camera
+        self.camera_high = np.asarray([0.7, 0.7, 4.5], dtype=float) # Needed for constraining relative motion of camera
+        self.camera_reset = np.asarray([0, 0, 1.8], dtype=float) # Camera reset position
 
         self.pixelWidth = 84
         self.pixelHeight = 84
@@ -95,13 +98,15 @@ class Manipulation_Env(gym.Env):
         if(self.global_view):
             _, _, global_image, _, _ = p.getCameraImage(self.global_pixel, self.global_pixel, self.global_view_matrix, self.global_projection)
             self.global_image = np.asarray(global_image, dtype=np.uint8)[:,:,:3]
-        view = p.computeViewMatrix([0.7,0.7,self.camDistance], [0.7,0.7,0], [0,1,0])
-        projection = p.computeProjectionMatrixFOV(self.fov / 1.8, self.aspect, 0.5, 5.0)
+        view = p.computeViewMatrix(self.camera_reset[:2].tolist() + [self.camDistance],
+            self.camera_reset[:2].tolist() + [0], [0,1,0])
+        projection = p.computeProjectionMatrixFOV(self.fov / self.camera_reset[2], self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.uint8).transpose(2,0,1)[:3]
         for i in range(self.stack_num):
             self.frame_stack.append(curimg)
         self.cur_ep = 0
+        self.camera_current = self.camera_reset.copy()
 
         obs = np.concatenate(list(self.frame_stack), axis=0)
         return obs
@@ -118,6 +123,7 @@ class Manipulation_Env(gym.Env):
     def one_step(self, action):
         assert(self.action_space.contains(action))
         action = self.translate(action)
+        self.relative_camera_motion(action)
 
         # Ask pybullet to set the joints to the indicated velocities        
         p.setJointMotorControlArray(self.link_arm, self.arm_joints, p.VELOCITY_CONTROL, targetVelocities = action["joint"], forces = [80] * 7)
@@ -126,9 +132,9 @@ class Manipulation_Env(gym.Env):
         if(self.global_view):
             _, _, global_image, _, _ = p.getCameraImage(self.global_pixel, self.global_pixel, self.global_view_matrix, self.global_projection)
             self.global_image = np.asarray(global_image, dtype=np.uint8)[:,:,:3]
-        view = p.computeViewMatrix([action["camera"][0], action["camera"][1], self.camDistance],
-            [action["camera"][0], action["camera"][1], 0], [0,1,0])
-        projection = p.computeProjectionMatrixFOV(self.fov / action["camera"][2], self.aspect, 0.5, 5.0)
+        view = p.computeViewMatrix(self.camera_current[:2].tolist() + [self.camDistance],
+            self.camera_current[:2].tolist() + [0], [0,1,0])
+        projection = p.computeProjectionMatrixFOV(self.fov / self.camera_current[2], self.aspect, 0.5, 5.0)
         _, _, curimg, _, _ = p.getCameraImage(self.pixelWidth, self.pixelHeight, view, projection)
         curimg = np.asarray(curimg, dtype=np.uint8).transpose(2,0,1)[:3]
         self.frame_stack.append(curimg)
@@ -182,3 +188,10 @@ class Manipulation_Env(gym.Env):
         self.global_view = True
         self.global_view_matrix = p.computeViewMatrix([0,0,self.camDistance], [0,0,0], [0,1,0])
         self.global_projection = p.computeProjectionMatrixFOV(self.fov / 1.5, self.aspect, 0.5, 5.0)
+
+    def relative_camera_motion(self, action):
+        print("Relative calculation")
+        print(self.camera_current)
+        print(action["camera"])
+        self.camera_current += action["camera"]
+        self.camera_current = np.clip(self.camera_current, self.camera_low, self.camera_high)

@@ -20,14 +20,15 @@ faulthandler.enable()
 
 # Configuration variables
 num_train_frames = 1600000 # Taken from the medium difficulty rating
+num_train_frames = 10000
 
-eval_run = True # If this run is an evaluation run
+eval_run = False # If this run is an evaluation run
 eval_episodes = 5
 record_every = 1 # Record a video every record_every episodes
 save_every = 200 # Save an agent snapshot every save_every episodes
 replay_buffer_frames = 400000
 
-load_from = "snapshots/3000_save" # Option to load a saved checkpoint
+load_from = "" # Option to load a saved checkpoint
 
 # Agent configuration variables
 stddev_schedule = 'linear(1.0,0.1,100000)'
