@@ -20,7 +20,6 @@ faulthandler.enable()
 
 # Configuration variables
 num_train_frames = 1600000 # Taken from the medium difficulty rating
-num_train_frames = 10000
 
 eval_run = False # If this run is an evaluation run
 eval_episodes = 5
@@ -95,10 +94,9 @@ def evaluate():
             global_image = train_env.global_image.astype(np.uint8)
             # Now draw the rectangle to describe the view region selected by the agent
             # Somehow opencv rectangle doesn't work so I'm drawing it manually
-            translated_actions = train_env.low + (train_env.high - train_env.low) * (prev_action + 1) / 2
-            cur_fov = translated_actions[9]
-            cur_x = translated_actions[7]
-            cur_y = translated_actions[8]
+            cur_fov = train_env.camera_current[2]
+            cur_x = train_env.camera_current[0]
+            cur_y = train_env.camera_current[1]
             view_pixels = train_env.global_pixel / 2 * 1.4 / cur_fov
             upper_left = (cur_x * pixel_length_ratio - view_pixels + train_env.global_pixel / 2, -cur_y * pixel_length_ratio + view_pixels + train_env.global_pixel / 2)
             lower_right = (cur_x * pixel_length_ratio + view_pixels + train_env.global_pixel / 2, -cur_y * pixel_length_ratio - view_pixels + train_env.global_pixel / 2)

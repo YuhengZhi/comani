@@ -190,8 +190,5 @@ class Manipulation_Env(gym.Env):
         self.global_projection = p.computeProjectionMatrixFOV(self.fov / 1.5, self.aspect, 0.5, 5.0)
 
     def relative_camera_motion(self, action):
-        print("Relative calculation")
-        print(self.camera_current)
-        print(action["camera"])
         self.camera_current += action["camera"]
         self.camera_current = np.clip(self.camera_current, self.camera_low, self.camera_high)
